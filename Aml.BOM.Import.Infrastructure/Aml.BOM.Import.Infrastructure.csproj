@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Aml.BOM.Import.Application\Aml.BOM.Import.Application.csproj" />
+    <ProjectReference Include="..\Aml.BOM.Import.Domain\Aml.BOM.Import.Domain.csproj" />
+    <ProjectReference Include="..\Aml.BOM.Import.Shared\Aml.BOM.Import.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

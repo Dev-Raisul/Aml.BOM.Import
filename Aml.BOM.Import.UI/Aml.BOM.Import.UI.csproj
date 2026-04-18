@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Aml.BOM.Import.Application\Aml.BOM.Import.Application.csproj" />
+    <ProjectReference Include="..\Aml.BOM.Import.Domain\Aml.BOM.Import.Domain.csproj" />
+    <ProjectReference Include="..\Aml.BOM.Import.Infrastructure\Aml.BOM.Import.Infrastructure.csproj" />
+    <ProjectReference Include="..\Aml.BOM.Import.Shared\Aml.BOM.Import.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
