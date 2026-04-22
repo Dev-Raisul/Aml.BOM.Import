@@ -8,34 +8,60 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="20">
             
-            <!-- Database Settings -->
-            <GroupBox Header="Database Settings" Margin="0,0,0,20">
-                <StackPanel Margin="10">
-                    <TextBlock Text="Connection String:" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding DatabaseConnectionString, UpdateSourceTrigger=PropertyChanged}" 
-                            Margin="0,0,0,10"/>
-                    <Button Content="Test Connection" 
-                           Command="{Binding TestConnectionCommand}"
-                           Style="{StaticResource SecondaryButtonStyle}"
-                           HorizontalAlignment="Left"/>
-                </StackPanel>
-            </GroupBox>
+            <!-- Database and Sage Settings Side by Side -->
+            <Grid Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-            <!-- Sage Settings -->
-            <GroupBox Header="Sage Integration Settings" Margin="0,0,0,20">
-                <StackPanel Margin="10">
-                    <TextBlock Text="Server URL:" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding SageServerUrl, UpdateSourceTrigger=PropertyChanged}" 
-                            Margin="0,0,0,10"/>
-                    
-                    <TextBlock Text="Username:" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding SageUsername, UpdateSourceTrigger=PropertyChanged}" 
-                            Margin="0,0,0,10"/>
-                    
-                    <TextBlock Text="Company Code:" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding SageCompanyCode, UpdateSourceTrigger=PropertyChanged}"/>
-                </StackPanel>
-            </GroupBox>
+                <!-- Database Settings -->
+                <GroupBox Grid.Column="0" Header="Database Settings">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="Server:" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding DatabaseServer, UpdateSourceTrigger=PropertyChanged}" 
+                                Margin="0,0,0,10"/>
+                        
+                        <TextBlock Text="Database:" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding DatabaseName, UpdateSourceTrigger=PropertyChanged}" 
+                                Margin="0,0,0,10"/>
+                        
+                        <TextBlock Text="Username:" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding DatabaseUsername, UpdateSourceTrigger=PropertyChanged}" 
+                                Margin="0,0,0,10"/>
+                        
+                        <TextBlock Text="Password:" Margin="0,0,0,5"/>
+                        <PasswordBox x:Name="DatabasePasswordBox" 
+                                    Margin="0,0,0,10"/>
+                        
+                        <Button Content="Test Connection" 
+                               Command="{Binding TestConnectionCommand}"
+                               Style="{StaticResource SecondaryButtonStyle}"
+                               HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Sage Settings -->
+                <GroupBox Grid.Column="2" Header="Sage Integration Settings">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="Server URL:" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding SageServerUrl, UpdateSourceTrigger=PropertyChanged}" 
+                                Margin="0,0,0,10"/>
+                        
+                        <TextBlock Text="Username:" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding SageUsername, UpdateSourceTrigger=PropertyChanged}" 
+                                Margin="0,0,0,10"/>
+                        
+                        <TextBlock Text="Password:" Margin="0,0,0,5"/>
+                        <PasswordBox x:Name="SagePasswordBox" 
+                                    Margin="0,0,0,10"/>
+                        
+                        <TextBlock Text="Company Code:" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding SageCompanyCode, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                </GroupBox>
+            </Grid>
 
             <!-- Report Settings -->
             <GroupBox Header="Report Settings" Margin="0,0,0,20">
