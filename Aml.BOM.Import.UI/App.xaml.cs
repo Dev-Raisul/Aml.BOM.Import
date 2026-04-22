@@ -44,6 +44,8 @@ public partial class App : System.Windows.Application
                     new SageItemRepository(GetConnectionString()));
                 services.AddSingleton<IImportBomFileLogRepository>(sp => 
                     new ImportBomFileLogRepository(GetConnectionString(), sp.GetRequiredService<ILoggerService>()));
+                services.AddSingleton<IBomImportBillRepository>(sp => 
+                    new BomImportBillRepository(GetConnectionString(), sp.GetRequiredService<ILoggerService>()));
 
                 // Register services
                 services.AddSingleton<IDatabaseConnectionService, DatabaseConnectionService>();

@@ -1,5 +1,6 @@
 using Aml.BOM.Import.Domain.Entities;
 using Aml.BOM.Import.Shared.Interfaces;
+using ClosedXML.Excel;
 using System.IO;
 
 namespace Aml.BOM.Import.Infrastructure.Services;
@@ -7,11 +8,16 @@ namespace Aml.BOM.Import.Infrastructure.Services;
 public class FileImportService : IFileImportService
 {
     private readonly IImportBomFileLogRepository _fileLogRepository;
+    private readonly IBomImportBillRepository _bomBillRepository;
     private readonly ILoggerService _logger;
 
-    public FileImportService(IImportBomFileLogRepository fileLogRepository, ILoggerService logger)
+    public FileImportService(
+        IImportBomFileLogRepository fileLogRepository,
+        IBomImportBillRepository bomBillRepository,
+        ILoggerService logger)
     {
         _fileLogRepository = fileLogRepository;
+        _bomBillRepository = bomBillRepository;
         _logger = logger;
     }
 
@@ -27,12 +33,14 @@ public class FileImportService : IFileImportService
         }
 
         var fileName = Path.GetFileName(filePath);
+        var currentUser = Environment.UserName;
+        var importDate = DateTime.Now;
         
         // Create file log entry
         var fileLog = new ImportBomFileLog
         {
             FileName = fileName,
-            UploadDate = DateTime.Now
+            UploadDate = importDate
         };
 
         try
@@ -41,20 +49,21 @@ public class FileImportService : IFileImportService
             var fileId = await _fileLogRepository.CreateAsync(fileLog);
             _logger.LogInformation("BOM file logged successfully. FileId: {0}, FileName: {1}", fileId, fileLog.FileName);
 
-            // TODO: Implement actual file import logic
-            // - Read CSV/Excel file
-            // - Parse BOM data
-            // - Create BomImportRecord and BomImportLine entities
+            // Parse Excel file and import BOM data
+            var importResults = await ParseAndImportExcelFileAsync(filePath, fileName, currentUser, importDate);
 
-            // Return the fileId
+            // Return the results
             var result = new
             {
                 FileId = fileId,
                 FileName = fileLog.FileName,
-                Message = "File uploaded and logged successfully"
+                ImportedRecords = importResults.TotalRecords,
+                Tabs = importResults.TabsProcessed,
+                Message = $"File uploaded and {importResults.TotalRecords} records imported successfully"
             };
 
-            _logger.LogInformation("BOM file import initiated successfully. FileId: {0}", fileId);
+            _logger.LogInformation("BOM file import completed successfully. FileId: {0}, Records: {1}", 
+                fileId, importResults.TotalRecords);
             return result;
         }
         catch (Exception ex)
@@ -62,6 +71,169 @@ public class FileImportService : IFileImportService
             _logger.LogError("Failed to import BOM file: {0}", ex, filePath);
             throw;
         }
+    }
+
+    private async Task<ImportResults> ParseAndImportExcelFileAsync(string filePath, string fileName, 
+        string currentUser, DateTime importDate)
+    {
+        _logger.LogInformation("Parsing Excel file: {0}", filePath);
+
+        var bills = new List<BomImportBill>();
+        var tabsProcessed = new List<string>();
+
+        try
+        {
+            using var workbook = new XLWorkbook(filePath);
+
+            // Process each worksheet/tab
+            foreach (var worksheet in workbook.Worksheets)
+            {
+                var tabName = worksheet.Name;
+                _logger.LogInformation("Processing tab: {0}", tabName);
+
+                var tabBills = ParseWorksheet(worksheet, fileName, tabName, currentUser, importDate);
+                bills.AddRange(tabBills);
+                tabsProcessed.Add(tabName);
+
+                _logger.LogInformation("Processed {0} records from tab: {1}", tabBills.Count, tabName);
+            }
+
+            // Save all bills to database in batch
+            if (bills.Any())
+            {
+                var savedCount = await _bomBillRepository.CreateBatchAsync(bills);
+                _logger.LogInformation("Saved {0} BOM import bills to database", savedCount);
+            }
+
+            return new ImportResults
+            {
+                TotalRecords = bills.Count,
+                TabsProcessed = tabsProcessed.Count,
+                TabNames = tabsProcessed
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to parse Excel file: {0}", ex, filePath);
+            throw;
+        }
+    }
+
+    private List<BomImportBill> ParseWorksheet(IXLWorksheet worksheet, string fileName, string tabName, 
+        string currentUser, DateTime importDate)
+    {
+        var bills = new List<BomImportBill>();
+
+        // Find the header row (assuming row 1 contains headers)
+        var headerRow = worksheet.Row(1);
+        
+        // Map column names to indices
+        var columnMap = BuildColumnMap(headerRow);
+
+        // Start from row 2 (assuming row 1 is header)
+        var currentRow = 2;
+        var lineNumber = 1;
+
+        while (!worksheet.Row(currentRow).IsEmpty())
+        {
+            try
+            {
+                var row = worksheet.Row(currentRow);
+
+                var bill = new BomImportBill
+                {
+                    // Import metadata
+                    ImportFileName = fileName,
+                    ImportDate = importDate,
+                    ImportWindowsUser = currentUser,
+                    TabName = tabName,
+                    Status = "New",
+
+                    // BOM data from Excel columns
+                    LineNumber = lineNumber,
+                    ParentItemCode = GetCellValue(row, columnMap, "Parent Item", "Parent Item Code", "Parent Part"),
+                    ParentDescription = GetCellValue(row, columnMap, "Parent Description", "Parent Desc"),
+                    BOMLevel = GetCellValue(row, columnMap, "Level", "BOM Level"),
+                    BOMNumber = GetCellValue(row, columnMap, "BOM Number", "BOM#", "BOM No"),
+                    ComponentItemCode = GetCellValue(row, columnMap, "Component", "Component Item", "Item Code", "Part Number") ?? string.Empty,
+                    ComponentDescription = GetCellValue(row, columnMap, "Description", "Component Description", "Item Description"),
+                    Quantity = ParseDecimal(GetCellValue(row, columnMap, "Quantity", "Qty"), 0),
+                    UnitOfMeasure = GetCellValue(row, columnMap, "UOM", "Unit", "Unit of Measure"),
+                    Reference = GetCellValue(row, columnMap, "Reference", "Ref", "Designator"),
+                    Notes = GetCellValue(row, columnMap, "Notes", "Comments", "Remarks"),
+                    Category = GetCellValue(row, columnMap, "Category", "Type"),
+                    Type = GetCellValue(row, columnMap, "Item Type", "Type"),
+                    UnitCost = ParseDecimal(GetCellValue(row, columnMap, "Unit Cost", "Cost", "Price"), null),
+                    ExtendedCost = ParseDecimal(GetCellValue(row, columnMap, "Extended Cost", "Total Cost", "Total"), null),
+
+                    // Audit fields
+                    CreatedDate = DateTime.Now,
+                    ModifiedDate = DateTime.Now
+                };
+
+                // Only add if component item code is not empty
+                if (!string.IsNullOrWhiteSpace(bill.ComponentItemCode))
+                {
+                    bills.Add(bill);
+                    lineNumber++;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Failed to parse row {0} in tab {1}: {2}", currentRow, tabName, ex.Message);
+            }
+
+            currentRow++;
+        }
+
+        return bills;
+    }
+
+    private Dictionary<string, int> BuildColumnMap(IXLRow headerRow)
+    {
+        var columnMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        for (int col = 1; col <= headerRow.CellCount(); col++)
+        {
+            var cellValue = headerRow.Cell(col).GetString().Trim();
+            if (!string.IsNullOrWhiteSpace(cellValue))
+            {
+                columnMap[cellValue] = col;
+            }
+        }
+
+        return columnMap;
+    }
+
+    private string? GetCellValue(IXLRow row, Dictionary<string, int> columnMap, params string[] possibleNames)
+    {
+        foreach (var name in possibleNames)
+        {
+            if (columnMap.TryGetValue(name, out int colIndex))
+            {
+                var value = row.Cell(colIndex).GetString().Trim();
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+        }
+        return null;
+    }
+
+    private decimal ParseDecimal(string? value, decimal? defaultValue)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return defaultValue ?? 0;
+        }
+
+        if (decimal.TryParse(value, out decimal result))
+        {
+            return result;
+        }
+
+        return defaultValue ?? 0;
     }
 
     public async Task<bool> ValidateFileFormatAsync(string filePath)
@@ -97,6 +269,25 @@ public class FileImportService : IFileImportService
                 return false;
             }
 
+            // Try to open Excel file to verify it's valid
+            if (extension == ".xlsx" || extension == ".xls")
+            {
+                try
+                {
+                    using var workbook = new XLWorkbook(filePath);
+                    if (workbook.Worksheets.Count == 0)
+                    {
+                        _logger.LogWarning("Excel file has no worksheets: {0}", filePath);
+                        return false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning("Failed to open Excel file: {0}. Error: {1}", filePath, ex.Message);
+                    return false;
+                }
+            }
+
             _logger.LogInformation("File format validation passed for: {0}", filePath);
             return true;
         }
@@ -109,6 +300,13 @@ public class FileImportService : IFileImportService
 
     public IEnumerable<string> GetSupportedFileExtensions()
     {
-        return new[] { ".csv", ".xlsx", ".xls" };
+        return new[] { ".xlsx", ".xls" };
+    }
+
+    private class ImportResults
+    {
+        public int TotalRecords { get; set; }
+        public int TabsProcessed { get; set; }
+        public List<string> TabNames { get; set; } = new();
     }
 }
