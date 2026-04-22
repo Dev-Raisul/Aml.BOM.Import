@@ -42,6 +42,8 @@ public partial class App : System.Windows.Application
                     new NewBuyItemRepository(GetConnectionString()));
                 services.AddSingleton<ISageItemRepository>(sp => 
                     new SageItemRepository(GetConnectionString()));
+                services.AddSingleton<IImportBomFileLogRepository>(sp => 
+                    new ImportBomFileLogRepository(GetConnectionString(), sp.GetRequiredService<ILoggerService>()));
 
                 // Register services
                 services.AddSingleton<IDatabaseConnectionService, DatabaseConnectionService>();
@@ -153,9 +155,9 @@ public partial class App : System.Windows.Application
             logger.LogError("Failed to load connection string from settings file", ex);
         }
 
-        var defaultConnectionString = "Server=localhost;Database=AmlBomImport;Trusted_Connection=true;TrustServerCertificate=true;";
+        var defaultConnectionString = "Server=localhost;Database=MAS_AML;Trusted_Connection=true;TrustServerCertificate=true;";
         var defaultLogger = new FileLoggerService();
-        defaultLogger.LogWarning("Using default connection string");
+        defaultLogger.LogWarning("Using default connection string for MAS_AML database");
         return defaultConnectionString;
     }
 }
