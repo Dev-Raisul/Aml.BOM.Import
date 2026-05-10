@@ -1,11 +1,12 @@
 <Window x:Class="Aml.BOM.Import.UI.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d"
-        Title="BOM Import Utility" Height="700" Width="1200"
-        WindowStartupLocation="CenterScreen">
+xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+mc:Ignorable="d"
+Title="BOM Import Utility" Height="700" Width="1200"
+WindowStartupLocation="CenterScreen">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="200"/>
@@ -22,42 +23,66 @@
                           Margin="0,0,0,30"
                           TextWrapping="Wrap"/>
 
-                <Button Content="New Buy Items" 
-                       Command="{Binding NavigateCommand}"
+                <Button Command="{Binding NavigateCommand}"
                        CommandParameter="NewBuyItems"
                        Style="{StaticResource NavigationButtonStyle}"
-                       Margin="0,0,0,5"/>
+                       Margin="0,0,0,5">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Cart" Width="16" Height="16" Margin="0,0,8,0"/>
+                        <TextBlock Text="New Buy Items" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
-                <Button Content="New Make Items" 
-                       Command="{Binding NavigateCommand}"
+                <Button Command="{Binding NavigateCommand}"
                        CommandParameter="NewMakeItems"
                        Style="{StaticResource NavigationButtonStyle}"
-                       Margin="0,0,0,5"/>
+                       Margin="0,0,0,5">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Hammer" Width="16" Height="16" Margin="0,0,8,0"/>
+                        <TextBlock Text="New Make Items" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
-                <Button Content="New BOMs" 
-                       Command="{Binding NavigateCommand}"
+                <Button Command="{Binding NavigateCommand}"
                        CommandParameter="NewBoms"
                        Style="{StaticResource NavigationButtonStyle}"
-                       Margin="0,0,0,5"/>
+                       Margin="0,0,0,5">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Package" Width="16" Height="16" Margin="0,0,8,0"/>
+                        <TextBlock Text="New BOMs" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
-                <Button Content="Integrated BOMs" 
-                       Command="{Binding NavigateCommand}"
+                <Button Command="{Binding NavigateCommand}"
                        CommandParameter="IntegratedBoms"
                        Style="{StaticResource NavigationButtonStyle}"
-                       Margin="0,0,0,5"/>
+                       Margin="0,0,0,5">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="CheckCircle" Width="16" Height="16" Margin="0,0,8,0"/>
+                        <TextBlock Text="Integrated BOMs" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
-                <Button Content="Duplicate BOMs" 
-                       Command="{Binding NavigateCommand}"
+                <Button Command="{Binding NavigateCommand}"
                        CommandParameter="DuplicateBoms"
                        Style="{StaticResource NavigationButtonStyle}"
-                       Margin="0,0,0,5"/>
+                       Margin="0,0,0,5">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="ContentDuplicate" Width="16" Height="16" Margin="0,0,8,0"/>
+                        <TextBlock Text="Duplicate BOMs" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
                 <Separator Margin="0,20,0,20" Background="#34495E"/>
 
-                <Button Content="Settings" 
-                       Command="{Binding NavigateCommand}"
+                <Button Command="{Binding NavigateCommand}"
                        CommandParameter="Settings"
-                       Style="{StaticResource NavigationButtonStyle}"/>
+                       Style="{StaticResource NavigationButtonStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Cog" Width="16" Height="16" Margin="0,0,8,0"/>
+                        <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Border>
 

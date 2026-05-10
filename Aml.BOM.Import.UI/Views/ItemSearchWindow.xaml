@@ -1,0 +1,164 @@
+<Window x:Class="Aml.BOM.Import.UI.Views.ItemSearchWindow"
+xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+mc:Ignorable="d"
+Title="Search Sage Items"
+Height="600"
+Width="1200"
+WindowStartupLocation="CenterOwner"
+ResizeMode="CanResize">
+    
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Search Header -->
+        <TextBlock Grid.Row="0" 
+                  Text="Search for a Sage item to copy its properties (except description) to filtered items"
+                  FontSize="14"
+                  FontWeight="SemiBold"
+                  Margin="0,0,0,10"/>
+
+        <!-- Search Box -->
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBox x:Name="SearchTextBox"
+                    Grid.Column="0"
+                    FontSize="14"
+                    Padding="8"
+                    KeyDown="SearchTextBox_KeyDown">
+                <TextBox.Style>
+                    <Style TargetType="TextBox">
+                        <Style.Triggers>
+                            <Trigger Property="Text" Value="">
+                                <Setter Property="Background">
+                                    <Setter.Value>
+                                        <VisualBrush Stretch="None" AlignmentX="Left">
+                                            <VisualBrush.Visual>
+                                                <TextBlock Text="Type item code or description..." 
+                                                         Foreground="Gray" 
+                                                         Margin="5,0,0,0"/>
+                                            </VisualBrush.Visual>
+                                        </VisualBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
+
+            <Button Grid.Column="1"
+                   Padding="15,8"
+                   Margin="10,0,0,0"
+                   FontSize="14"
+                   Click="SearchButton_Click">
+                <StackPanel Orientation="Horizontal">
+                    <iconPacks:PackIconMaterial Kind="Magnify" Width="16" Height="16" Margin="0,0,5,0"/>
+                    <TextBlock Text="Search" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- Results DataGrid -->
+        <DataGrid x:Name="ResultsDataGrid"
+                 Grid.Row="2"
+                 AutoGenerateColumns="False"
+                 IsReadOnly="True"
+                 SelectionMode="Single"
+                 GridLinesVisibility="All"
+                 AlternatingRowBackground="#F5F5F5"
+                 MouseDoubleClick="ResultsDataGrid_MouseDoubleClick">
+            
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Item Code" 
+                                   Binding="{Binding ItemCode}" 
+                                   Width="150">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <DataGridTextColumn Header="Item Description" 
+                                   Binding="{Binding ItemDescription}" 
+                                   Width="250"/>
+
+                <DataGridTextColumn Header="Product Line" 
+                                   Binding="{Binding ProductLine}" 
+                                   Width="120"/>
+
+                <DataGridTextColumn Header="Product Type" 
+                                   Binding="{Binding ProductType}" 
+                                   Width="100"/>
+
+                <DataGridTextColumn Header="Procurement" 
+                                   Binding="{Binding Procurement}" 
+                                   Width="100"/>
+
+                <DataGridTextColumn Header="Standard UOM" 
+                                   Binding="{Binding StandardUnitOfMeasure}" 
+                                   Width="110"/>
+
+                <DataGridTextColumn Header="Sub Product Family" 
+                                   Binding="{Binding SubProductFamily}" 
+                                   Width="150"/>
+
+                <DataGridCheckBoxColumn Header="Staged" 
+                                       Binding="{Binding StagedItem}" 
+                                       Width="70"/>
+
+                <DataGridCheckBoxColumn Header="Coated" 
+                                       Binding="{Binding Coated}" 
+                                       Width="70"/>
+
+                <DataGridCheckBoxColumn Header="Golden Std" 
+                                       Binding="{Binding GoldenStandard}" 
+                                       Width="90"/>
+            </DataGrid.Columns>
+
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Cursor" Value="Hand"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#E3F2FD"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
+        </DataGrid>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="3" 
+                   Orientation="Horizontal" 
+                   HorizontalAlignment="Right"
+                   Margin="0,10,0,0">
+            <Button Content="Select"
+                   Padding="20,8"
+                   Margin="0,0,10,0"
+                   FontSize="14"
+                   Background="#4CAF50"
+                   Foreground="White"
+                   BorderThickness="0"
+                   Cursor="Hand"
+                   Click="SelectButton_Click"/>
+            <Button Content="Cancel"
+                   Padding="20,8"
+                   FontSize="14"
+                   Click="CancelButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

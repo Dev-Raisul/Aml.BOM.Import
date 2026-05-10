@@ -9,15 +9,18 @@ public class FileImportService : IFileImportService
 {
     private readonly IImportBomFileLogRepository _fileLogRepository;
     private readonly IBomImportBillRepository _bomBillRepository;
+    private readonly IBomValidationService _validationService;
     private readonly ILoggerService _logger;
 
     public FileImportService(
         IImportBomFileLogRepository fileLogRepository,
         IBomImportBillRepository bomBillRepository,
+        IBomValidationService validationService,
         ILoggerService logger)
     {
         _fileLogRepository = fileLogRepository;
         _bomBillRepository = bomBillRepository;
+        _validationService = validationService;
         _logger = logger;
     }
 
@@ -35,6 +38,14 @@ public class FileImportService : IFileImportService
         var fileName = Path.GetFileName(filePath);
         var currentUser = Environment.UserName;
         var importDate = DateTime.Now;
+
+        // Check if file was already imported
+        var isAlreadyImported = await _validationService.IsFileAlreadyImportedAsync(fileName);
+        if (isAlreadyImported)
+        {
+            _logger.LogWarning("File already imported: {0}", fileName);
+            throw new InvalidOperationException($"The file '{fileName}' has already been imported. Duplicate imports are not allowed.");
+        }
         
         // Create file log entry
         var fileLog = new ImportBomFileLog
@@ -52,6 +63,14 @@ public class FileImportService : IFileImportService
             // Parse Excel file and import BOM data
             var importResults = await ParseAndImportExcelFileAsync(filePath, fileName, currentUser, importDate);
 
+            // Automatically validate the newly imported file
+            _logger.LogInformation("Starting automatic validation for newly imported file: {0}", fileName);
+            var validationResult = await _validationService.ValidateImportFileAsync(fileName);
+
+            // Also validate all other pending BOMs
+            _logger.LogInformation("Validating all other pending BOMs");
+            await _validationService.ValidateAllPendingAsync();
+
             // Return the results
             var result = new
             {
@@ -59,12 +78,24 @@ public class FileImportService : IFileImportService
                 FileName = fileLog.FileName,
                 ImportedRecords = importResults.TotalRecords,
                 Tabs = importResults.TabsProcessed,
-                Message = $"File uploaded and {importResults.TotalRecords} records imported successfully"
+                ValidatedRecords = validationResult.ValidatedRecords,
+                NewBuyItems = validationResult.NewBuyItems,
+                NewMakeItems = validationResult.NewMakeItems,
+                DuplicateBoms = validationResult.DuplicateBoms,
+                FailedRecords = validationResult.FailedRecords,
+                Message = $"File uploaded and {importResults.TotalRecords} records imported. Validation: {validationResult.ValidatedRecords} validated, {validationResult.DuplicateBoms} duplicates found.",
+                Warnings = validationResult.Warnings,
+                Errors = validationResult.Errors
             };
 
-            _logger.LogInformation("BOM file import completed successfully. FileId: {0}, Records: {1}", 
-                fileId, importResults.TotalRecords);
+            _logger.LogInformation("BOM file import and validation completed successfully. FileId: {0}, Records: {1}, Validated: {2}", 
+                fileId, importResults.TotalRecords, validationResult.ValidatedRecords);
             return result;
+        }
+        catch (InvalidOperationException)
+        {
+            // Re-throw duplicate file exception
+            throw;
         }
         catch (Exception ex)
         {

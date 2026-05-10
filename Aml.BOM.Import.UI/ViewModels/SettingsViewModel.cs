@@ -1,4 +1,4 @@
-using Aml.BOM.Import.Application.Models;
+﻿using Aml.BOM.Import.Application.Models;
 using Aml.BOM.Import.Shared.Interfaces;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -120,7 +120,7 @@ public partial class SettingsViewModel : ObservableObject
 
     private string BuildConnectionString()
     {
-        return $"Server={DatabaseServer};Database={DatabaseName};User Id={DatabaseUsername};Password={DatabasePassword};";
+        return $"Server={DatabaseServer};Database={DatabaseName};User Id={DatabaseUsername};Password={DatabasePassword};TrustServerCertificate=true";
     }
 
     [RelayCommand]
@@ -181,8 +181,8 @@ public partial class SettingsViewModel : ObservableObject
                 DatabasePassword);
             
             StatusMessage = isValid 
-                ? "? Connection successful!" 
-                : "? Connection failed. Please check your settings.";
+                ? "✓ Connection successful!" 
+                : "✗ Connection failed. Please check your settings.";
             
             if (isValid)
             {
@@ -196,7 +196,7 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError("Connection test error", ex);
-            StatusMessage = $"? Connection error: {ex.Message}";
+            StatusMessage = $"✗ Connection error: {ex.Message}";
         }
     }
 }

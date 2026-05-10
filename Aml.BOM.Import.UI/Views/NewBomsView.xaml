@@ -8,7 +8,9 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Toolbar -->
@@ -17,15 +19,122 @@
                    Command="{Binding ImportFileCommand}"
                    Style="{StaticResource PrimaryButtonStyle}"
                    Margin="0,0,10,0"/>
+            <Button Content="Revalidate All" 
+                   Command="{Binding RevalidateAllCommand}"
+                   Style="{StaticResource SecondaryButtonStyle}"
+                   Margin="0,0,10,0"/>
             <Button Content="Refresh" 
                    Command="{Binding RefreshCommand}"
                    Style="{StaticResource SecondaryButtonStyle}"/>
         </StackPanel>
 
+        <!-- Statistics Panel -->
+        <Border Grid.Row="1" 
+                Background="{StaticResource PrimaryBackgroundBrush}" 
+                BorderBrush="{StaticResource BorderBrush}" 
+                BorderThickness="1" 
+                CornerRadius="5" 
+                Padding="15" 
+                Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Total Pending -->
+                <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                    <TextBlock Text="Total Pending" 
+                              FontSize="12" 
+                              FontWeight="SemiBold" 
+                              Foreground="{StaticResource SecondaryTextBrush}" 
+                              HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalPendingBoms}" 
+                              FontSize="28" 
+                              FontWeight="Bold" 
+                              Foreground="{StaticResource PrimaryTextBrush}" 
+                              HorizontalAlignment="Center" 
+                              Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <!-- Ready to Integrate -->
+                <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                    <TextBlock Text="Ready to Integrate" 
+                              FontSize="12" 
+                              FontWeight="SemiBold" 
+                              Foreground="{StaticResource SecondaryTextBrush}" 
+                              HorizontalAlignment="Center" 
+                              TextWrapping="Wrap" 
+                              TextAlignment="Center"/>
+                    <TextBlock Text="{Binding ValidatedBomsCount}" 
+                              FontSize="28" 
+                              FontWeight="Bold" 
+                              Foreground="#4CAF50" 
+                              HorizontalAlignment="Center" 
+                              Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <!-- New Make Items Required -->
+                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                    <TextBlock Text="New Make Items" 
+                              FontSize="12" 
+                              FontWeight="SemiBold" 
+                              Foreground="{StaticResource SecondaryTextBrush}" 
+                              HorizontalAlignment="Center" 
+                              TextWrapping="Wrap" 
+                              TextAlignment="Center"/>
+                    <TextBlock Text="{Binding NewMakeItemsCount}" 
+                              FontSize="28" 
+                              FontWeight="Bold" 
+                              Foreground="#FF9800" 
+                              HorizontalAlignment="Center" 
+                              Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <!-- New Buy Items Required -->
+                <StackPanel Grid.Column="3" HorizontalAlignment="Center">
+                    <TextBlock Text="New Buy Items" 
+                              FontSize="12" 
+                              FontWeight="SemiBold" 
+                              Foreground="{StaticResource SecondaryTextBrush}" 
+                              HorizontalAlignment="Center" 
+                              TextWrapping="Wrap" 
+                              TextAlignment="Center"/>
+                    <TextBlock Text="{Binding NewBuyItemsCount}" 
+                              FontSize="28" 
+                              FontWeight="Bold" 
+                              Foreground="#2196F3" 
+                              HorizontalAlignment="Center" 
+                              Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <!-- Duplicates -->
+                <StackPanel Grid.Column="4" HorizontalAlignment="Center">
+                    <TextBlock Text="Duplicates" 
+                              FontSize="12" 
+                              FontWeight="SemiBold" 
+                              Foreground="{StaticResource SecondaryTextBrush}" 
+                              HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding DuplicateBomsCount}" 
+                              FontSize="28" 
+                              FontWeight="Bold" 
+                              Foreground="#9E9E9E" 
+                              HorizontalAlignment="Center" 
+                              Margin="0,5,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
         <!-- BOMs Grid -->
-        <DataGrid Grid.Row="1" 
+        <DataGrid Grid.Row="2" 
                  ItemsSource="{Binding Boms}"
-                 SelectedItem="{Binding SelectedBom}">
+                 SelectedItem="{Binding SelectedBom}"
+                 AutoGenerateColumns="False"
+                 IsReadOnly="True"
+                 SelectionMode="Single">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="BOM Number" Binding="{Binding BomNumber}" Width="150"/>
                 <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
@@ -36,15 +145,31 @@
             </DataGrid.Columns>
         </DataGrid>
 
+        <!-- Status Bar -->
+        <Border Grid.Row="3" 
+                Background="{StaticResource SecondaryBackgroundBrush}" 
+                BorderBrush="{StaticResource BorderBrush}" 
+                BorderThickness="0,1,0,0" 
+                Padding="10,5">
+            <TextBlock Text="{Binding StatusMessage}" 
+                      FontSize="12" 
+                      Foreground="{StaticResource SecondaryTextBrush}"/>
+        </Border>
+
         <!-- Loading Overlay -->
-        <Border Grid.Row="0" Grid.RowSpan="2" 
+        <Border Grid.Row="0" Grid.RowSpan="4" 
                Background="#80000000" 
                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <TextBlock Text="Loading..." 
-                      FontSize="20" 
-                      Foreground="White" 
-                      HorizontalAlignment="Center" 
-                      VerticalAlignment="Center"/>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="Loading..." 
+                          FontSize="20" 
+                          Foreground="White" 
+                          HorizontalAlignment="Center" 
+                          Margin="0,0,0,10"/>
+                <ProgressBar IsIndeterminate="True" 
+                            Width="200" 
+                            Height="10"/>
+            </StackPanel>
         </Border>
     </Grid>
 </UserControl>

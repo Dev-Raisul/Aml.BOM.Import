@@ -39,9 +39,9 @@ public partial class App : System.Windows.Application
                 services.AddSingleton<INewMakeItemRepository>(sp => 
                     new NewMakeItemRepository(GetConnectionString()));
                 services.AddSingleton<INewBuyItemRepository>(sp => 
-                    new NewBuyItemRepository(GetConnectionString()));
+                    new NewBuyItemRepository(GetConnectionString(), sp.GetRequiredService<ILoggerService>()));
                 services.AddSingleton<ISageItemRepository>(sp => 
-                    new SageItemRepository(GetConnectionString()));
+                    new SageItemRepository(GetConnectionString(), sp.GetRequiredService<ILoggerService>()));
                 services.AddSingleton<IImportBomFileLogRepository>(sp => 
                     new ImportBomFileLogRepository(GetConnectionString(), sp.GetRequiredService<ILoggerService>()));
                 services.AddSingleton<IBomImportBillRepository>(sp => 
@@ -49,8 +49,18 @@ public partial class App : System.Windows.Application
 
                 // Register services
                 services.AddSingleton<IDatabaseConnectionService, DatabaseConnectionService>();
-                services.AddSingleton<IFileImportService, FileImportService>();
-                services.AddSingleton<IBomValidationService, BomValidationService>();
+                services.AddSingleton<IFileImportService>(sp => 
+                    new FileImportService(
+                        sp.GetRequiredService<IImportBomFileLogRepository>(),
+                        sp.GetRequiredService<IBomImportBillRepository>(),
+                        sp.GetRequiredService<IBomValidationService>(),
+                        sp.GetRequiredService<ILoggerService>()));
+                services.AddSingleton<IBomValidationService>(sp => 
+                    new BomValidationService(
+                        sp.GetRequiredService<ISageItemRepository>(),
+                        sp.GetRequiredService<IBomImportBillRepository>(),
+                        sp.GetRequiredService<IImportBomFileLogRepository>(),
+                        sp.GetRequiredService<ILoggerService>()));
                 services.AddSingleton<IBomIntegrationService, BomIntegrationService>();
                 services.AddSingleton<ISettingsService, SettingsService>();
 
@@ -62,10 +72,21 @@ public partial class App : System.Windows.Application
                 // Register ViewModels
                 services.AddSingleton<MainWindowViewModel>();
                 services.AddTransient<NewBuyItemsViewModel>();
-                services.AddTransient<NewMakeItemsViewModel>();
-                services.AddTransient<NewBomsViewModel>();
+                services.AddTransient<NewMakeItemsViewModel>(sp => 
+                    new NewMakeItemsViewModel(
+                        sp.GetRequiredService<NewItemService>(),
+                        sp.GetRequiredService<INewMakeItemRepository>(),
+                        sp.GetRequiredService<ISageItemRepository>()));
+                services.AddTransient<NewBomsViewModel>(sp => 
+                    new NewBomsViewModel(
+                        sp.GetRequiredService<BomImportService>(),
+                        sp.GetRequiredService<IBomImportBillRepository>(),
+                        sp.GetRequiredService<IBomValidationService>()));
                 services.AddTransient<IntegratedBomsViewModel>();
-                services.AddTransient<DuplicateBomsViewModel>();
+                services.AddTransient<DuplicateBomsViewModel>(sp => 
+                    new DuplicateBomsViewModel(
+                        sp.GetRequiredService<BomImportService>(),
+                        sp.GetRequiredService<IBomImportBillRepository>()));
                 services.AddTransient<SettingsViewModel>();
 
                 // Register MainWindow

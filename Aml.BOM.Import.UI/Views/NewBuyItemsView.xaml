@@ -1,46 +1,248 @@
 <UserControl x:Class="Aml.BOM.Import.UI.Views.NewBuyItemsView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
+xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+mc:Ignorable="d" 
+d:DesignHeight="600" d:DesignWidth="1000">
+    <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- Header -->
+        <TextBlock Grid.Row="0" 
+                   Text="New Buy Items" 
+                   FontSize="24" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,15"/>
+
         <!-- Toolbar -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-            <Button Content="Refresh" 
-                   Command="{Binding RefreshCommand}"
-                   Style="{StaticResource PrimaryButtonStyle}"
-                   Margin="0,0,10,0"/>
-        </StackPanel>
+        <Border Grid.Row="1" 
+                Background="#F5F5F5" 
+                BorderBrush="#CCCCCC" 
+                BorderThickness="1" 
+                CornerRadius="5" 
+                Padding="10" 
+                Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Action Buttons -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button Command="{Binding RefreshCommand}"
+                           Style="{StaticResource PrimaryButtonStyle}"
+                           Margin="0,0,10,0"
+                           Padding="15,8"
+                           ToolTip="Refresh the list of new buy items">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="Refresh" 
+                                                       Width="16" 
+                                                       Height="16" 
+                                                       VerticalAlignment="Center" 
+                                                       Margin="0,0,5,0"/>
+                            <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    
+                    <Button Command="{Binding PrintCommand}"
+                           Style="{StaticResource PrimaryButtonStyle}"
+                           Padding="15,8"
+                           ToolTip="Print the list of new buy items">
+                        <StackPanel Orientation="Horizontal">
+                            <iconPacks:PackIconMaterial Kind="Printer" 
+                                                       Width="16" 
+                                                       Height="16" 
+                                                       VerticalAlignment="Center" 
+                                                       Margin="0,0,5,0"/>
+                            <TextBlock Text="Print" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- Statistics -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Background="#2196F3" 
+                            CornerRadius="15" 
+                            Padding="12,5" 
+                            Margin="5,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Total Items: " 
+                                      Foreground="White" 
+                                      FontWeight="Bold"/>
+                            <TextBlock Text="{Binding TotalItems}" 
+                                      Foreground="White" 
+                                      FontWeight="Bold"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
 
         <!-- Items Grid -->
-        <DataGrid Grid.Row="1" 
-                 ItemsSource="{Binding Items}"
-                 SelectedItem="{Binding SelectedItem}">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Item Code" Binding="{Binding ItemCode}" Width="150"/>
-                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
-                <DataGridTextColumn Header="UOM" Binding="{Binding UnitOfMeasure}" Width="80"/>
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/>
-                <DataGridTextColumn Header="Identified Date" Binding="{Binding IdentifiedDate, StringFormat='yyyy-MM-dd'}" Width="120"/>
-            </DataGrid.Columns>
-        </DataGrid>
+        <Border Grid.Row="2" 
+                BorderBrush="#CCCCCC" 
+                BorderThickness="1" 
+                CornerRadius="5">
+            <DataGrid ItemsSource="{Binding Items}"
+                     SelectedItem="{Binding SelectedItem}"
+                     AutoGenerateColumns="False"
+                     IsReadOnly="True"
+                     SelectionMode="Single"
+                     SelectionUnit="FullRow"
+                     CanUserAddRows="False"
+                     CanUserDeleteRows="False"
+                     CanUserReorderColumns="True"
+                     CanUserResizeColumns="True"
+                     CanUserResizeRows="False"
+                     CanUserSortColumns="True"
+                     GridLinesVisibility="Horizontal"
+                     HeadersVisibility="Column"
+                     AlternatingRowBackground="#F9F9F9"
+                     RowHeight="35"
+                     FontSize="12">
+                
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#2196F3"/>
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Padding" Value="10,8"/>
+                        <Setter Property="BorderBrush" Value="#1976D2"/>
+                        <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+
+                <DataGrid.CellStyle>
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="Padding" Value="10,5"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="#E3F2FD"/>
+                                <Setter Property="Foreground" Value="Black"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.CellStyle>
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Item Code" 
+                                       Binding="{Binding ItemCode}" 
+                                       Width="150"
+                                       FontWeight="SemiBold"/>
+                    
+                    <DataGridTextColumn Header="Description" 
+                                       Binding="{Binding Description}" 
+                                       Width="*"
+                                       MinWidth="200"/>
+                    
+                    <DataGridTextColumn Header="UOM" 
+                                       Binding="{Binding UnitOfMeasure}" 
+                                       Width="80"/>
+                    
+                    <DataGridTextColumn Header="Identified Date" 
+                                       Binding="{Binding IdentifiedDate, StringFormat='yyyy-MM-dd'}" 
+                                       Width="120"/>
+                    
+                    <DataGridTextColumn Header="Identified By" 
+                                       Binding="{Binding IdentifiedBy}" 
+                                       Width="120"/>
+                    
+                    <DataGridTextColumn Header="Occurrences" 
+                                       Binding="{Binding OccurrenceCount}" 
+                                       Width="100">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="Foreground" Value="#FF5722"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                </DataGrid.Columns>
+
+                <!-- Empty State -->
+                <DataGrid.Style>
+                    <Style TargetType="DataGrid">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Items.Count}" Value="0">
+                                <Setter Property="Background">
+                                    <Setter.Value>
+                                        <VisualBrush Stretch="None">
+                                            <VisualBrush.Visual>
+                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock Text="??" 
+                                                              FontSize="48" 
+                                                              HorizontalAlignment="Center" 
+                                                              Margin="0,0,0,10"
+                                                              Opacity="0.3"/>
+                                                    <TextBlock Text="No new buy items found" 
+                                                              FontSize="16" 
+                                                              Foreground="Gray" 
+                                                              HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="New buy items will appear here after importing BOMs" 
+                                                              FontSize="12" 
+                                                              Foreground="LightGray" 
+                                                              HorizontalAlignment="Center" 
+                                                              Margin="0,5,0,0"/>
+                                                </StackPanel>
+                                            </VisualBrush.Visual>
+                                        </VisualBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.Style>
+            </DataGrid>
+        </Border>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="3" 
+                Background="#F5F5F5" 
+                BorderBrush="#CCCCCC" 
+                BorderThickness="1,1,1,1" 
+                Padding="10,5" 
+                Margin="0,10,0,0">
+            <Grid>
+                <TextBlock Text="{Binding StatusMessage}" 
+                          FontSize="11" 
+                          Foreground="#666666"/>
+                
+                <TextBlock HorizontalAlignment="Right" 
+                          FontSize="11" 
+                          Foreground="#666666">
+                    <Run Text="Last Updated: "/>
+                    <Run Text="{Binding Mode=OneWay, StringFormat='yyyy-MM-dd HH:mm:ss'}"/>
+                </TextBlock>
+            </Grid>
+        </Border>
 
         <!-- Loading Overlay -->
-        <Border Grid.Row="0" Grid.RowSpan="2" 
-               Background="#80000000" 
-               Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <TextBlock Text="Loading..." 
-                      FontSize="20" 
-                      Foreground="White" 
-                      HorizontalAlignment="Center" 
-                      VerticalAlignment="Center"/>
+        <Border Grid.Row="0" Grid.RowSpan="4" 
+               Background="#CC000000" 
+               Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
+               CornerRadius="5">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressBar Width="200" 
+                            Height="20" 
+                            IsIndeterminate="True" 
+                            Margin="0,0,0,15"/>
+                <TextBlock Text="Loading new buy items..." 
+                          FontSize="16" 
+                          Foreground="White" 
+                          HorizontalAlignment="Center" 
+                          FontWeight="SemiBold"/>
+            </StackPanel>
         </Border>
     </Grid>
 </UserControl>

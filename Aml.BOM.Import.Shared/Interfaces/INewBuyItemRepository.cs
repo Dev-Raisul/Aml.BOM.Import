@@ -8,4 +8,5 @@ public interface INewBuyItemRepository
     Task UpdateAsync(object newBuyItem);
     Task DeleteAsync(int id);
     Task<IEnumerable<object>> GetByStatusAsync(int status);
+    Task<int> GetCountAsync();
 }

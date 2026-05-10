@@ -33,6 +33,13 @@
     <views:SettingsView/>
 </DataTemplate>
 
+<!-- Color Brushes -->
+<SolidColorBrush x:Key="PrimaryBackgroundBrush" Color="#FFFFFF"/>
+<SolidColorBrush x:Key="SecondaryBackgroundBrush" Color="#ECF0F1"/>
+<SolidColorBrush x:Key="BorderBrush" Color="#BDC3C7"/>
+<SolidColorBrush x:Key="PrimaryTextBrush" Color="#2C3E50"/>
+<SolidColorBrush x:Key="SecondaryTextBrush" Color="#7F8C8D"/>
+
 <!-- Navigation Button Style -->
     <Style x:Key="NavigationButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
@@ -134,3 +141,4 @@
     </Style>
 
 </ResourceDictionary>
+
