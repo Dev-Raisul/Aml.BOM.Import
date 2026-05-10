@@ -164,13 +164,46 @@ public partial class NewMakeItemsViewModel : ObservableObject
 
     private string ConvertWildcardToRegex(string pattern)
     {
-        // Convert % to .* (zero or more characters)
-        // Convert ? to . (single character)
-        var regexPattern = System.Text.RegularExpressions.Regex.Escape(pattern)
-            .Replace("\\%", ".*")
-            .Replace("\\?", ".");
+        // Build regex pattern character by character
+        // % = zero or more characters (.*)
+        // ? = exactly one character (.)
+        // All other characters are escaped for regex
+        var regexPattern = new System.Text.StringBuilder();
         
-        return "^" + regexPattern + "$";
+        foreach (char c in pattern)
+        {
+            switch (c)
+            {
+                case '%':
+                    regexPattern.Append(".*");
+                    break;
+                case '?':
+                    regexPattern.Append(".");
+                    break;
+                case '.':
+                case '\\':
+                case '+':
+                case '*':
+                case '[':
+                case ']':
+                case '(':
+                case ')':
+                case '{':
+                case '}':
+                case '^':
+                case '$':
+                case '|':
+                    // Escape regex special characters
+                    regexPattern.Append('\\').Append(c);
+                    break;
+                default:
+                    // Regular character
+                    regexPattern.Append(c);
+                    break;
+            }
+        }
+        
+        return "^" + regexPattern.ToString() + "$";
     }
 
     [RelayCommand]
