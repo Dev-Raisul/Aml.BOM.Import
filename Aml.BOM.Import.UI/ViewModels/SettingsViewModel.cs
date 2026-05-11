@@ -2,6 +2,8 @@
 using Aml.BOM.Import.Shared.Interfaces;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.IO;
+using System.Windows.Forms;
 
 namespace Aml.BOM.Import.UI.ViewModels;
 
@@ -24,7 +26,7 @@ public partial class SettingsViewModel : ObservableObject
     private string _databasePassword = string.Empty;
 
     [ObservableProperty]
-    private string _sageServerUrl = string.Empty;
+    private string _sagePath = string.Empty;
 
     [ObservableProperty]
     private string _sageUsername = string.Empty;
@@ -67,7 +69,7 @@ public partial class SettingsViewModel : ObservableObject
             if (settings != null)
             {
                 ParseConnectionString(settings.DatabaseConnectionString);
-                SageServerUrl = settings.SageSettings.ServerUrl;
+                SagePath = settings.SageSettings.SagePath;
                 SageUsername = settings.SageSettings.Username;
                 SagePassword = settings.SageSettings.Password ?? string.Empty;
                 SageCompanyCode = settings.SageSettings.CompanyCode;
@@ -138,7 +140,7 @@ public partial class SettingsViewModel : ObservableObject
                 DatabaseConnectionString = BuildConnectionString(),
                 SageSettings = new SageSettings
                 {
-                    ServerUrl = SageServerUrl,
+                    SagePath = SagePath,
                     Username = SageUsername,
                     Password = SagePassword,
                     CompanyCode = SageCompanyCode
@@ -198,5 +200,124 @@ public partial class SettingsViewModel : ObservableObject
             _logger.LogError("Connection test error", ex);
             StatusMessage = $"✗ Connection error: {ex.Message}";
         }
+    }
+
+    [RelayCommand]
+    private void BrowseSagePath()
+    {
+        try
+        {
+            using var dialog = new FolderBrowserDialog
+            {
+                Description = "Select Sage 100 Home Directory (e.g., C:\\Sage\\Sage100Standard\\MAS90\\Home)",
+                UseDescriptionForTitle = true,
+                ShowNewFolderButton = false
+            };
+
+            // Set initial directory if SagePath is already set
+            if (!string.IsNullOrWhiteSpace(SagePath) && Directory.Exists(SagePath))
+            {
+                dialog.InitialDirectory = SagePath;
+            }
+            else
+            {
+                // Default to C:\Sage if it exists
+                if (Directory.Exists(@"C:\Sage"))
+                {
+                    dialog.InitialDirectory = @"C:\Sage";
+                }
+            }
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                SagePath = dialog.SelectedPath;
+                _logger.LogInformation("Sage path selected: {0}", SagePath);
+                
+                // Validate if the selected path looks like a Sage directory
+                if (!ValidateSagePath(SagePath))
+                {
+                    StatusMessage = "⚠ Warning: Selected directory may not be a valid Sage 100 Home directory.";
+                }
+                else
+                {
+                    StatusMessage = "✓ Sage path selected successfully!";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error browsing for Sage path", ex);
+            StatusMessage = $"Error selecting folder: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void BrowseReportOutputDirectory()
+    {
+        try
+        {
+            using var dialog = new FolderBrowserDialog
+            {
+                Description = "Select Report Output Directory",
+                UseDescriptionForTitle = true,
+                ShowNewFolderButton = true
+            };
+
+            // Set initial directory if ReportOutputDirectory is already set
+            if (!string.IsNullOrWhiteSpace(ReportOutputDirectory) && Directory.Exists(ReportOutputDirectory))
+            {
+                dialog.InitialDirectory = ReportOutputDirectory;
+            }
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                ReportOutputDirectory = dialog.SelectedPath;
+                _logger.LogInformation("Report output directory selected: {0}", ReportOutputDirectory);
+                StatusMessage = "✓ Report directory selected successfully!";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Error browsing for report output directory", ex);
+            StatusMessage = $"Error selecting folder: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Validates if the selected path looks like a valid Sage 100 Home directory
+    /// </summary>
+    private bool ValidateSagePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            return false;
+
+        // Check for common Sage files/folders
+        // Typical Sage 100 Home directory contains files like pvx.exe, pvxwin32.exe, or folders like SOA, MAS_* etc.
+        var sageIndicators = new[]
+        {
+            "pvx.exe",
+            "pvxwin32.exe",
+            "pvx.ini",
+            "SOA",
+            "MAS90.exe"
+        };
+
+        foreach (var indicator in sageIndicators)
+        {
+            var fullPath = Path.Combine(path, indicator);
+            if (File.Exists(fullPath) || Directory.Exists(fullPath))
+            {
+                return true;
+            }
+        }
+
+        // Check if path contains typical Sage folder names
+        var pathLower = path.ToLower();
+        if (pathLower.Contains("sage") && pathLower.Contains("mas90"))
+        {
+            return true;
+        }
+
+        return false;
     }
 }

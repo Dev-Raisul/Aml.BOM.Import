@@ -45,9 +45,19 @@
                 <!-- Sage Settings -->
                 <GroupBox Grid.Column="2" Header="Sage Integration Settings">
                     <StackPanel Margin="10">
-                        <TextBlock Text="Server URL:" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding SageServerUrl, UpdateSourceTrigger=PropertyChanged}" 
-                                Margin="0,0,0,10"/>
+                        <TextBlock Text="Sage Home Directory:" Margin="0,0,0,5"/>
+                        <TextBlock Text="(e.g., C:\Sage\Sage100Standard\MAS90\Home)" 
+                                  FontSize="10" 
+                                  Foreground="Gray" 
+                                  Margin="0,0,0,5"/>
+                        <DockPanel Margin="0,0,0,10">
+                            <Button Content="Browse..." 
+                                   DockPanel.Dock="Right" 
+                                   Margin="5,0,0,0"
+                                   Command="{Binding BrowseSagePathCommand}"
+                                   Style="{StaticResource SecondaryButtonStyle}"/>
+                            <TextBox Text="{Binding SagePath, UpdateSourceTrigger=PropertyChanged}"/>
+                        </DockPanel>
                         
                         <TextBlock Text="Username:" Margin="0,0,0,5"/>
                         <TextBox Text="{Binding SageUsername, UpdateSourceTrigger=PropertyChanged}" 
@@ -71,6 +81,7 @@
                         <Button Content="Browse..." 
                                DockPanel.Dock="Right" 
                                Margin="5,0,0,0"
+                               Command="{Binding BrowseReportOutputDirectoryCommand}"
                                Style="{StaticResource SecondaryButtonStyle}"/>
                         <TextBox Text="{Binding ReportOutputDirectory, UpdateSourceTrigger=PropertyChanged}"/>
                     </DockPanel>

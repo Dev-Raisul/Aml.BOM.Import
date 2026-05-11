@@ -9,7 +9,7 @@ public class AppSettings
 
 public class SageSettings
 {
-    public string ServerUrl { get; set; } = string.Empty;
+    public string SagePath { get; set; } = @"C:\Sage\Sage100Standard\MAS90\Home";
     public string Username { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
     public string CompanyCode { get; set; } = string.Empty;

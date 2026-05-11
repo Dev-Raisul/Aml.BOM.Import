@@ -1,10 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+<PropertyGroup>
+  <TargetFramework>net8.0-windows</TargetFramework>
+  <ImplicitUsings>enable</ImplicitUsings>
+  <Nullable>enable</Nullable>
+  <UseWindowsForms>true</UseWindowsForms>
+</PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.102.3" />
@@ -15,7 +16,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Aml.BOM.Import.Application\Aml.BOM.Import.Application.csproj" />
-    <ProjectReference Include="..\Aml.BOM.Import.Domain\Aml.BOM.Import.Domain.csproj" />
     <ProjectReference Include="..\Aml.BOM.Import.Shared\Aml.BOM.Import.Shared.csproj" />
   </ItemGroup>
 

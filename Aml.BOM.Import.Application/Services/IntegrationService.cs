@@ -16,9 +16,9 @@ public class IntegrationService
         return await _bomIntegrationService.IntegrateBomAsync(bomImportRecordId);
     }
 
-    public async Task<bool> IntegrateItemsToSageAsync(IEnumerable<int> itemIds)
+    public async Task<bool> IntegrateItemsToSageAsync(IEnumerable<object> items)
     {
-        return await _bomIntegrationService.IntegrateNewItemsAsync(itemIds);
+        return await _bomIntegrationService.IntegrateNewItemsAsync(items);
     }
 
     public async Task<object> GetIntegrationStatusAsync(int bomImportRecordId)

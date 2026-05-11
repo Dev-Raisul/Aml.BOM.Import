@@ -9,4 +9,5 @@ public interface INewMakeItemRepository
     Task DeleteAsync(int id);
     Task<IEnumerable<object>> GetByStatusAsync(int status);
     Task BulkUpdateFieldAsync(IEnumerable<int> itemIds, string fieldName, object value);
+    Task MarkAsIntegratedAsync(string itemCode, string importFileName);
 }

@@ -14,6 +14,7 @@ public partial class NewMakeItemsViewModel : ObservableObject
     private readonly NewItemService _newItemService;
     private readonly INewMakeItemRepository _makeItemRepository;
     private readonly ISageItemRepository _sageItemRepository;
+    private readonly IBomIntegrationService _bomIntegrationService;
 
     private List<NewMakeItem> _allItems = new();
     private string? _lastEditedColumn;
@@ -69,11 +70,13 @@ public partial class NewMakeItemsViewModel : ObservableObject
     public NewMakeItemsViewModel(
         NewItemService newItemService,
         INewMakeItemRepository makeItemRepository,
-        ISageItemRepository sageItemRepository)
+        ISageItemRepository sageItemRepository,
+        IBomIntegrationService bomIntegrationService)
     {
         _newItemService = newItemService;
         _makeItemRepository = makeItemRepository;
         _sageItemRepository = sageItemRepository;
+        _bomIntegrationService = bomIntegrationService;
         
         // Load all new make items on startup
         LoadItemsCommand.Execute(null);
@@ -426,8 +429,8 @@ public partial class NewMakeItemsViewModel : ObservableObject
         }
 
         var result = MessageBox.Show(
-            $"Ready to integrate {itemsToIntegrate.Count} make items into Sage.\n\n" +
-            $"This will create the items in Sage 100. Continue?",
+            $"Ready to integrate {itemsToIntegrate.Count} make items into Sage 100.\n\n" +
+            $"This will create the items in Sage using COM integration. Continue?",
             "Integrate Make Items",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
@@ -435,48 +438,68 @@ public partial class NewMakeItemsViewModel : ObservableObject
         if (result == MessageBoxResult.Yes)
         {
             IsLoading = true;
-            StatusMessage = "Integrating items...";
+            StatusMessage = "Integrating items into Sage 100...";
             
             try
             {
-                int successCount = 0;
-                int failedCount = 0;
-
-                foreach (var item in itemsToIntegrate)
-                {
-                    try
-                    {
-                        // TODO: Call integration service
-                        // await _integrationService.IntegrateMakeItemAsync(item);
-                        
-                        item.IsIntegrated = true;
-                        item.IntegratedDate = DateTime.Now;
-                        item.IntegratedBy = Environment.UserName;
-                        successCount++;
-                    }
-                    catch
-                    {
-                        failedCount++;
-                    }
-                }
-
-                await SaveChanges();
+                // Pass the actual items with their current edited values (not IDs)
+                // This ensures we integrate the in-memory edited data, not database values
+                bool success = await _bomIntegrationService.IntegrateNewItemsAsync(itemsToIntegrate);
                 
-                MessageBox.Show(
-                    $"Integration complete:\n\n" +
-                    $"Successful: {successCount}\n" +
-                    $"Failed: {failedCount}",
-                    "Integration Complete",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-
+                // Reload items to get updated integration status
                 await LoadItems();
+                
+                // Count results from reloaded data
+                int successCount = itemsToIntegrate.Count(i => i.IsIntegrated);
+                int failedCount = itemsToIntegrate.Count - successCount;
+                
+                if (success && failedCount == 0)
+                {
+                    StatusMessage = $"Successfully integrated {successCount} items into Sage 100";
+                    MessageBox.Show(
+                        $"Integration successful!\n\n" +
+                        $"Created {successCount} make items in Sage 100.",
+                        "Integration Complete",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+                else
+                {
+                    StatusMessage = $"Integration completed with errors: {successCount} succeeded, {failedCount} failed";
+                    MessageBox.Show(
+                        $"Integration completed with some errors:\n\n" +
+                        $"Successful: {successCount}\n" +
+                        $"Failed: {failedCount}\n\n" +
+                        $"Check the logs for details.",
+                        "Integration Partial Success",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("Sage settings"))
+            {
+                StatusMessage = "Sage settings not configured";
+                MessageBox.Show(
+                    "Sage 100 settings are not configured.\n\n" +
+                    "Please go to Settings and configure:\n" +
+                    "• Sage Home Directory\n" +
+                    "• Username\n" +
+                    "• Password\n" +
+                    "• Company Code",
+                    "Configuration Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
                 StatusMessage = $"Error during integration: {ex.Message}";
                 MessageBox.Show(
-                    $"Error during integration: {ex.Message}",
+                    $"Integration failed:\n\n{ex.Message}\n\n" +
+                    $"Please check:\n" +
+                    $"• Sage 100 is installed and accessible\n" +
+                    $"• Sage settings are correct\n" +
+                    $"• You have permission to create items\n" +
+                    $"• All required fields are populated",
                     "Integration Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
