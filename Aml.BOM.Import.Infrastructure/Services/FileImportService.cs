@@ -193,7 +193,7 @@ public class FileImportService : IFileImportService
                     Reference = GetCellValue(row, columnMap, "Reference", "Ref", "Designator"),
                     Notes = GetCellValue(row, columnMap, "Notes", "Comments", "Remarks"),
                     Category = GetCellValue(row, columnMap, "Category", "Type"),
-                    Type = GetCellValue(row, columnMap, "Item Type", "Type"),
+                    Type = GetCellValue(row, columnMap, "Procurement Type", "Procurement", "Item Type", "Type"),
                     UnitCost = ParseDecimal(GetCellValue(row, columnMap, "Unit Cost", "Cost", "Price"), null),
                     ExtendedCost = ParseDecimal(GetCellValue(row, columnMap, "Extended Cost", "Total Cost", "Total"), null),
 

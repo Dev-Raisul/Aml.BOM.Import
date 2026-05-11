@@ -112,44 +112,64 @@ public class BomValidationService : IBomValidationService
             // Reload bills after duplicate marking
             bills = (await _billRepository.GetByFileNameAsync(fileName)).ToList();
 
-            // Validate each bill
-            foreach (var bill in bills.Where(b => b.Status == "New"))
-            {
-                var validationResult = await ValidateBillAsync(bill);
+                // Validate each bill
+                foreach (var bill in bills.Where(b => b.Status == "New"))
+                {
+                    var validationResult = await ValidateBillAsync(bill);
 
-                // Update bill based on validation
-                if (validationResult.IsDuplicate)
-                {
-                    bill.Status = "Duplicate";
-                    bill.ValidationMessage = validationResult.ValidationMessage;
-                }
-                else if (!validationResult.ComponentExists)
-                {
-                    // Determine if it's a buy or make item (simplified logic)
-                    bill.Status = "NewBuyItem"; // Default to buy, could be enhanced with more logic
-                    bill.ItemExists = false;
-                    bill.ValidationMessage = validationResult.ValidationMessage;
-                    result.NewBuyItems++;
-                }
-                else if (validationResult.IsValid)
-                {
-                    bill.Status = "Validated";
-                    bill.DateValidated = DateTime.Now;
-                    bill.ItemExists = validationResult.ComponentExists;
-                    bill.ItemType = validationResult.ComponentItemType;
-                    bill.ValidationMessage = validationResult.ValidationMessage;
-                    result.ValidatedRecords++;
-                }
-                else
-                {
-                    bill.Status = "Failed";
-                    bill.ValidationMessage = validationResult.ValidationMessage;
-                    result.FailedRecords++;
-                }
+                    // Update bill based on validation
+                    if (validationResult.IsDuplicate)
+                    {
+                        bill.Status = "Duplicate";
+                        bill.ValidationMessage = validationResult.ValidationMessage;
+                    }
+                    else if (!validationResult.ComponentExists)
+                    {
+                        // Determine if it's a buy or make item based on Procurement Type from Excel
+                        string procurementType = bill.Type?.Trim().ToUpper() ?? "";
+                        
+                        if (procurementType == "M" || procurementType == "MAKE")
+                        {
+                            bill.Status = "NewMakeItem";
+                            bill.ItemType = "Make";
+                            result.NewMakeItems++;
+                        }
+                        else if (procurementType == "B" || procurementType == "BUY")
+                        {
+                            bill.Status = "NewBuyItem";
+                            bill.ItemType = "Buy";
+                            result.NewBuyItems++;
+                        }
+                        else
+                        {
+                            // Default to Buy if procurement type not specified
+                            bill.Status = "NewBuyItem";
+                            bill.ItemType = "Buy";
+                            result.NewBuyItems++;
+                        }
+                        
+                        bill.ItemExists = false;
+                        bill.ValidationMessage = validationResult.ValidationMessage;
+                    }
+                    else if (validationResult.IsValid)
+                    {
+                        bill.Status = "Validated";
+                        bill.DateValidated = DateTime.Now;
+                        bill.ItemExists = validationResult.ComponentExists;
+                        bill.ItemType = validationResult.ComponentItemType;
+                        bill.ValidationMessage = validationResult.ValidationMessage;
+                        result.ValidatedRecords++;
+                    }
+                    else
+                    {
+                        bill.Status = "Failed";
+                        bill.ValidationMessage = validationResult.ValidationMessage;
+                        result.FailedRecords++;
+                    }
 
-                // Update the bill in database
-                await _billRepository.UpdateAsync(bill);
-            }
+                    // Update the bill in database
+                    await _billRepository.UpdateAsync(bill);
+                }
 
             // Build status summary
             var summary = await _billRepository.GetStatusSummaryAsync();

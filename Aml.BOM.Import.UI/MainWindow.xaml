@@ -24,6 +24,16 @@ WindowStartupLocation="CenterScreen">
                           TextWrapping="Wrap"/>
 
                 <Button Command="{Binding NavigateCommand}"
+                       CommandParameter="NewBoms"
+                       Style="{StaticResource NavigationButtonStyle}"
+                       Margin="0,0,0,5">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Package" Width="16" Height="16" Margin="0,0,8,0"/>
+                        <TextBlock Text="New BOMs" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Command="{Binding NavigateCommand}"
                        CommandParameter="NewBuyItems"
                        Style="{StaticResource NavigationButtonStyle}"
                        Margin="0,0,0,5">
@@ -40,16 +50,6 @@ WindowStartupLocation="CenterScreen">
                     <StackPanel Orientation="Horizontal">
                         <iconPacks:PackIconMaterial Kind="Hammer" Width="16" Height="16" Margin="0,0,8,0"/>
                         <TextBlock Text="New Make Items" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-
-                <Button Command="{Binding NavigateCommand}"
-                       CommandParameter="NewBoms"
-                       Style="{StaticResource NavigationButtonStyle}"
-                       Margin="0,0,0,5">
-                    <StackPanel Orientation="Horizontal">
-                        <iconPacks:PackIconMaterial Kind="Package" Width="16" Height="16" Margin="0,0,8,0"/>
-                        <TextBlock Text="New BOMs" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 

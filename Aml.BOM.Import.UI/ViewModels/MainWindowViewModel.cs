@@ -19,6 +19,9 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
+        
+        // Navigate to New BOMs view on startup
+        Navigate("NewBoms");
     }
 
     [RelayCommand]
