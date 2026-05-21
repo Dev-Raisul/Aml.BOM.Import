@@ -340,24 +340,6 @@ public class NewMakeItemRepository : INewMakeItemRepository
                     await cmd.ExecuteNonQueryAsync();
                 }
 
-                // 2. Keep isBOMImportBills in sync
-                const string updateBills = @"
-                    UPDATE dbo.isBOMImportBills
-                    SET Status        = 'Integrated',
-                        DateIntegrated = GETDATE(),
-                        IntegratedBy  = @IntegratedBy
-                    WHERE ComponentItemCode = @ItemCode
-                      AND ImportFileName    = @ImportFileName
-                      AND Status            = 'NewMakeItem'";
-
-                using (var cmd = new SqlCommand(updateBills, connection, transaction))
-                {
-                    cmd.Parameters.AddWithValue("@ItemCode",      itemCode);
-                    cmd.Parameters.AddWithValue("@ImportFileName", importFileName);
-                    cmd.Parameters.AddWithValue("@IntegratedBy",  Environment.UserName);
-                    await cmd.ExecuteNonQueryAsync();
-                }
-
                 transaction.Commit();
             }
             catch
@@ -374,7 +356,8 @@ public class NewMakeItemRepository : INewMakeItemRepository
 
     // -------------------------------------------------------------------------
     // CopyFromBillsAsync – copy all new make items identified during the import
-    //                      of @importFileName into isBOMImport_NewMakeItems.
+    //                      of @importFileName into isBOMImport_NewMakeItems
+    //                      using the stored procedure isSp_CopyNewMakeItemsFromBills.
     //                      Only the first occurrence of each unique item code is
     //                      inserted; existing entries are left untouched.
     // -------------------------------------------------------------------------
@@ -386,53 +369,9 @@ public class NewMakeItemRepository : INewMakeItemRepository
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            const string query = @"
-                INSERT INTO dbo.isBOMImport_NewMakeItems
-                (
-                    ItemCode, ImportFileName, ImportDate, ItemDescription,
-                    ProductLine, ProductType, Procurement, StandardUnitOfMeasure,
-                    SubProductFamily, StagedItem, Coated, GoldenStandard,
-                    IsIntegrated, CreatedDate, CreatedWindowsUser, ModifiedDate, ModifiedWindowsUser
-                )
-                SELECT
-                    src.ComponentItemCode,
-                    src.ImportFileName,
-                    src.ImportDate,
-                    src.ComponentDescription,
-                    NULL  AS ProductLine,
-                    'F'   AS ProductType,
-                    'M'   AS Procurement,
-                    'EACH' AS StandardUnitOfMeasure,
-                    NULL  AS SubProductFamily,
-                    0     AS StagedItem,
-                    0     AS Coated,
-                    0     AS GoldenStandard,
-                    0     AS IsIntegrated,
-                    GETDATE()    AS CreatedDate,
-                    @WindowsUser AS CreatedWindowsUser,
-                    GETDATE()    AS ModifiedDate,
-                    @WindowsUser AS ModifiedWindowsUser
-                FROM
-                (
-                    SELECT
-                        b.ComponentItemCode,
-                        b.ImportFileName,
-                        b.ImportDate,
-                        b.ComponentDescription,
-                        ROW_NUMBER() OVER (PARTITION BY b.ComponentItemCode ORDER BY b.Id ASC) AS rn
-                    FROM dbo.isBOMImportBills b
-                    WHERE b.ImportFileName = @ImportFileName
-                      AND b.Status         = 'NewMakeItem'
-                ) src
-                WHERE src.rn = 1
-                  AND NOT EXISTS
-                  (
-                      SELECT 1
-                      FROM dbo.isBOMImport_NewMakeItems ex
-                      WHERE ex.ItemCode = src.ComponentItemCode
-                  );";
-
-            using var command = new SqlCommand(query, connection);
+            using var command = new SqlCommand("dbo.isSp_CopyNewMakeItemsFromBills", connection);
+            command.CommandType = CommandType.StoredProcedure;
+            
             command.Parameters.AddWithValue("@ImportFileName", importFileName);
             command.Parameters.AddWithValue("@WindowsUser",    Environment.UserName);
 

@@ -1,8 +1,10 @@
+using Aml.BOM.Import.Domain.Models;
+
 namespace Aml.BOM.Import.Shared.Interfaces;
 
 public interface IFileImportService
 {
-    Task<object> ImportFileAsync(string filePath);
+    Task<ImportFileResponse> ImportFileAsync(string filePath);
     Task<bool> ValidateFileFormatAsync(string filePath);
     IEnumerable<string> GetSupportedFileExtensions();
 }

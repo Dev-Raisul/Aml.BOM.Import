@@ -65,11 +65,11 @@ GO
 -- Stored procedure: copy new make items from isBOMImportBills after a file import.
 -- Inserts only the first occurrence of each item code (ignores duplicates).
 -- =============================================
-IF OBJECT_ID('dbo.usp_CopyNewMakeItemsFromBills', 'P') IS NOT NULL
-    DROP PROCEDURE dbo.usp_CopyNewMakeItemsFromBills;
+IF OBJECT_ID('dbo.isSp_CopyNewMakeItemsFromBills', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.isSp_CopyNewMakeItemsFromBills;
 GO
 
-CREATE PROCEDURE dbo.usp_CopyNewMakeItemsFromBills
+CREATE PROCEDURE dbo.isSp_CopyNewMakeItemsFromBills
     @ImportFileName   NVARCHAR(255),
     @WindowsUser      NVARCHAR(100)
 AS
@@ -157,5 +157,5 @@ WHERE TABLE_NAME = 'isBOMImport_NewMakeItems'
 GO
 
 PRINT 'Table isBOMImport_NewMakeItems created successfully in MAS_AML database!';
-PRINT 'Stored procedure usp_CopyNewMakeItemsFromBills created successfully!';
+PRINT 'Stored procedure isSp_CopyNewMakeItemsFromBills created successfully!';
 GO

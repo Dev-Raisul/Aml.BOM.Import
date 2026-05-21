@@ -1,3 +1,4 @@
+using Aml.BOM.Import.Domain.Models;
 using Aml.BOM.Import.Domain.Entities;
 using Aml.BOM.Import.Shared.Interfaces;
 using ClosedXML.Excel;
@@ -24,7 +25,7 @@ public class FileImportService : IFileImportService
         _logger = logger;
     }
 
-    public async Task<object> ImportFileAsync(string filePath)
+    public async Task<ImportFileResponse> ImportFileAsync(string filePath)
     {
         _logger.LogInformation("Starting BOM file import for: {0}", filePath);
 
@@ -72,12 +73,13 @@ public class FileImportService : IFileImportService
             await _validationService.ValidateAllPendingAsync();
 
             // Return the results
-            var result = new
+            var result = new ImportFileResponse
             {
+                Success = true,
                 FileId = fileId,
                 FileName = fileLog.FileName,
                 ImportedRecords = importResults.TotalRecords,
-                Tabs = importResults.TabsProcessed,
+                TabsProcessed = importResults.TabsProcessed,
                 ValidatedRecords = validationResult.ValidatedRecords,
                 NewBuyItems = validationResult.NewBuyItems,
                 NewMakeItems = validationResult.NewMakeItems,

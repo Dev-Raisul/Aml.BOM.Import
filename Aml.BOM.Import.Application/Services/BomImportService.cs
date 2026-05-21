@@ -1,4 +1,4 @@
-using Aml.BOM.Import.Application.Models;
+using Aml.BOM.Import.Domain.Models;
 using Aml.BOM.Import.Shared.Interfaces;
 using AppValidationResult = Aml.BOM.Import.Application.Models.ValidationResult;
 using ServiceValidationResult = Aml.BOM.Import.Shared.Interfaces.ValidationResult;
@@ -60,26 +60,8 @@ public class BomImportService
 
             // Import the file (this includes automatic validation)
             var importResult = await _fileImportService.ImportFileAsync(request.FilePath);
-            
-            // Extract results from dynamic object
-            dynamic result = importResult;
-            
-            return new ImportFileResponse
-            {
-                Success = true,
-                Message = result.Message?.ToString() ?? "File imported successfully",
-                FileId = result.FileId,
-                FileName = result.FileName?.ToString() ?? fileName,
-                ImportedRecords = result.ImportedRecords,
-                ValidatedRecords = result.ValidatedRecords,
-                NewBuyItems = result.NewBuyItems,
-                NewMakeItems = result.NewMakeItems,
-                DuplicateBoms = result.DuplicateBoms,
-                FailedRecords = result.FailedRecords,
-                TabsProcessed = result.Tabs,
-                Warnings = result.Warnings != null ? ((IEnumerable<string>)result.Warnings).ToList() : new List<string>(),
-                Errors = result.Errors != null ? ((IEnumerable<string>)result.Errors).ToList() : new List<string>()
-            };
+
+            return importResult;
         }
         catch (System.IO.FileNotFoundException ex)
         {

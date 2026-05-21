@@ -20,6 +20,20 @@ public partial class NewMakeItemsViewModel : ObservableObject
     private string? _lastEditedColumn;
     private bool _promptForBulkCopy = true;
 
+    // Properties whose changes should be persisted immediately to the DB
+    private static readonly HashSet<string> _editableProperties =
+    [
+        nameof(NewMakeItem.ItemDescription),
+        nameof(NewMakeItem.ProductLine),
+        nameof(NewMakeItem.ProductType),
+        nameof(NewMakeItem.Procurement),
+        nameof(NewMakeItem.StandardUnitOfMeasure),
+        nameof(NewMakeItem.SubProductFamily),
+        nameof(NewMakeItem.StagedItem),
+        nameof(NewMakeItem.Coated),
+        nameof(NewMakeItem.GoldenStandard)
+    ];
+
     [ObservableProperty]
     private ObservableCollection<NewMakeItem> _items = new();
 
@@ -570,6 +584,49 @@ public partial class NewMakeItemsViewModel : ObservableObject
             "Golden Std" => nameof(NewMakeItem.GoldenStandard),
             _ => null
         };
+    }
+
+    // -------------------------------------------------------------------------
+    // Auto-save on item property change
+    // -------------------------------------------------------------------------
+
+    // Called by the CommunityToolkit source generator whenever Items is replaced.
+    partial void OnItemsChanged(
+        ObservableCollection<NewMakeItem>? oldValue,
+        ObservableCollection<NewMakeItem> newValue)
+    {
+        if (oldValue != null)
+        {
+            foreach (var item in oldValue)
+                item.PropertyChanged -= OnItemPropertyChanged;
+        }
+
+        if (newValue != null)
+        {
+            foreach (var item in newValue)
+                item.PropertyChanged += OnItemPropertyChanged;
+        }
+    }
+
+    private void OnItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (sender is not NewMakeItem item) return;
+        if (e.PropertyName == null || !_editableProperties.Contains(e.PropertyName)) return;
+
+        UpdateStatistics();
+        _ = SaveItemAsync(item);
+    }
+
+    private async Task SaveItemAsync(NewMakeItem item)
+    {
+        try
+        {
+            await _makeItemRepository.UpdateAsync(item);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error saving {item.ItemCode}: {ex.Message}";
+        }
     }
 
     private void UpdateStatistics()

@@ -1,5 +1,5 @@
 using System.Collections.ObjectModel;
-using Aml.BOM.Import.Application.Models;
+using Aml.BOM.Import.Domain.Models;
 using Aml.BOM.Import.Application.Services;
 using Aml.BOM.Import.Shared.Interfaces;
 using CommunityToolkit.Mvvm.ComponentModel;
