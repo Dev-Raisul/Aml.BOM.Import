@@ -133,6 +133,29 @@ public partial class SettingsViewModel : ObservableObject
 
         try
         {
+            // Validate Sage path before saving
+            if (!string.IsNullOrWhiteSpace(SagePath) && IsUncPath(SagePath))
+            {
+                var result = System.Windows.MessageBox.Show(
+                    "⚠ WARNING: Network Path Detected\n\n" +
+                    $"Sage Home Directory is set to a network path:\n{SagePath}\n\n" +
+                    "This may cause Sage integration to FAIL!\n\n" +
+                    "It is STRONGLY RECOMMENDED to map this network path to a drive letter.\n\n" +
+                    "Do you want to save these settings anyway?",
+                    "Network Path Warning",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Warning);
+                
+                if (result == System.Windows.MessageBoxResult.No)
+                {
+                    StatusMessage = "⚠ Settings not saved - Please map network drive to a drive letter.";
+                    _logger.LogWarning("User cancelled save due to UNC path warning");
+                    return;
+                }
+                
+                _logger.LogWarning("User chose to save settings with UNC path: {0}", SagePath);
+            }
+            
             _logger.LogInformation("Saving settings - Server={0}, Database={1}", DatabaseServer, DatabaseName);
             
             var settings = new AppSettings
@@ -153,7 +176,17 @@ public partial class SettingsViewModel : ObservableObject
             };
 
             await _settingsService.SaveSettingsAsync(settings);
-            StatusMessage = "Settings saved successfully!";
+            
+            // Add warning to success message if UNC path
+            if (IsUncPath(SagePath))
+            {
+                StatusMessage = "⚠ Settings saved - WARNING: Network path may cause integration failures!";
+            }
+            else
+            {
+                StatusMessage = "Settings saved successfully!";
+            }
+            
             _logger.LogInformation("Settings saved successfully");
         }
         catch (Exception ex)
@@ -209,7 +242,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             using var dialog = new FolderBrowserDialog
             {
-                Description = "Select Sage 100 Home Directory (e.g., C:\\Sage\\Sage100Standard\\MAS90\\Home)",
+                Description = "Select Sage 100 Home Directory - MUST be a mapped drive (e.g., Z:\\Sage\\MAS90\\Home)\nNetwork paths (\\\\server\\share) are NOT supported",
                 UseDescriptionForTitle = true,
                 ShowNewFolderButton = false
             };
@@ -230,17 +263,94 @@ public partial class SettingsViewModel : ObservableObject
 
             if (dialog.ShowDialog() == DialogResult.OK)
             {
-                SagePath = dialog.SelectedPath;
-                _logger.LogInformation("Sage path selected: {0}", SagePath);
+                var selectedPath = dialog.SelectedPath;
                 
-                // Validate if the selected path looks like a Sage directory
-                if (!ValidateSagePath(SagePath))
+                // Check if it's a UNC path (network path)
+                if (IsUncPath(selectedPath))
                 {
-                    StatusMessage = "⚠ Warning: Selected directory may not be a valid Sage 100 Home directory.";
+                    _logger.LogWarning("UNC path rejected: {0}", selectedPath);
+                    
+                    var result = System.Windows.MessageBox.Show(
+                        "⚠ Network Path Not Supported\n\n" +
+                        $"You selected a network path:\n{selectedPath}\n\n" +
+                        "Sage integration requires a MAPPED DRIVE letter (e.g., Z:\\).\n\n" +
+                        "Network paths (\\\\server\\share) may cause integration to fail.\n\n" +
+                        "Would you like to:\n" +
+                        "• Map this network path to a drive letter (recommended)\n" +
+                        "• Continue anyway (not recommended - integration may fail)\n\n" +
+                        "Click YES to map the drive, NO to continue anyway, or CANCEL to select a different folder.",
+                        "Mapped Drive Required",
+                        System.Windows.MessageBoxButton.YesNoCancel,
+                        System.Windows.MessageBoxImage.Warning);
+                    
+                    if (result == System.Windows.MessageBoxResult.Yes)
+                    {
+                        // Show instructions for mapping a drive
+                        System.Windows.MessageBox.Show(
+                            "How to Map a Network Drive:\n\n" +
+                            "1. Open File Explorer (Windows + E)\n" +
+                            "2. Click 'This PC' in the left sidebar\n" +
+                            "3. Click 'Map network drive' in the ribbon (or right-click 'This PC' → 'Map network drive')\n" +
+                            "4. Choose a drive letter (e.g., Z:)\n" +
+                            $"5. Enter the network path: {selectedPath}\n" +
+                            "6. Check 'Reconnect at sign-in'\n" +
+                            "7. Click 'Finish'\n" +
+                            "8. Come back here and browse to the new drive letter\n\n" +
+                            "After mapping, the path will look like:\nZ:\\MAS90\\Home (instead of \\\\server\\share\\MAS90\\Home)",
+                            "Drive Mapping Instructions",
+                            System.Windows.MessageBoxButton.OK,
+                            System.Windows.MessageBoxImage.Information);
+                        
+                        StatusMessage = "⚠ Please map the network drive and try again.";
+                        return;
+                    }
+                    else if (result == System.Windows.MessageBoxResult.No)
+                    {
+                        // User chose to continue anyway
+                        SagePath = selectedPath;
+                        StatusMessage = "⚠ WARNING: Using network path - Integration may fail! Please map to a drive letter.";
+                        _logger.LogWarning("User chose to use UNC path despite warning: {0}", selectedPath);
+                        return;
+                    }
+                    else
+                    {
+                        // User cancelled - do nothing
+                        StatusMessage = "Sage path selection cancelled.";
+                        return;
+                    }
+                }
+                
+                // Check if it's a mapped drive (preferred)
+                if (IsMappedDrive(selectedPath))
+                {
+                    SagePath = selectedPath;
+                    _logger.LogInformation("Mapped drive Sage path selected: {0}", SagePath);
+                    
+                    // Validate if the selected path looks like a Sage directory
+                    if (!ValidateSagePath(SagePath))
+                    {
+                        StatusMessage = "⚠ Warning: Selected directory may not be a valid Sage 100 Home directory.";
+                    }
+                    else
+                    {
+                        StatusMessage = "✓ Sage path selected successfully (Mapped Drive)!";
+                    }
                 }
                 else
                 {
-                    StatusMessage = "✓ Sage path selected successfully!";
+                    // Local drive (C:, D:, etc.) - this is also acceptable
+                    SagePath = selectedPath;
+                    _logger.LogInformation("Local drive Sage path selected: {0}", SagePath);
+                    
+                    // Validate if the selected path looks like a Sage directory
+                    if (!ValidateSagePath(SagePath))
+                    {
+                        StatusMessage = "⚠ Warning: Selected directory may not be a valid Sage 100 Home directory.";
+                    }
+                    else
+                    {
+                        StatusMessage = "✓ Sage path selected successfully!";
+                    }
                 }
             }
         }
@@ -316,6 +426,40 @@ public partial class SettingsViewModel : ObservableObject
         if (pathLower.Contains("sage") && pathLower.Contains("mas90"))
         {
             return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if the path is a UNC path (network path like \\server\share)
+    /// </summary>
+    private bool IsUncPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        // UNC paths start with \\ or //
+        return path.StartsWith(@"\\") || path.StartsWith("//");
+    }
+
+    /// <summary>
+    /// Checks if the path is a mapped drive (has a drive letter)
+    /// </summary>
+    private bool IsMappedDrive(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+
+        // Mapped drives start with a drive letter followed by colon (e.g., Z:, X:)
+        // But we need to differentiate from local drives
+        if (path.Length >= 2 && char.IsLetter(path[0]) && path[1] == ':')
+        {
+            var driveLetter = path.Substring(0, 2);
+            var driveInfo = new DriveInfo(driveLetter);
+            
+            // Network drives have DriveType.Network
+            return driveInfo.DriveType == DriveType.Network;
         }
 
         return false;

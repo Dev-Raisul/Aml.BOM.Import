@@ -241,20 +241,21 @@ public class SageItemRepository : ISageItemRepository
 
         const string sql = @"
             SELECT TOP 100
-                ItemCode,
-                ItemCodeDesc as ItemDescription,
-                ProductLine,
-                ProductType,
-                ProcurementType as Procurement,
-                StandardUnitOfMeasure,
-                UDF_SUB_PRODUCT_FAMILY as SubProductFamily,
-                UDF_STAGED_ITEM as StagedItem,
-                UDF_COATED as Coated,
-                'N' as GoldenStandard
-            FROM CI_Item 
-            WHERE trim(ItemCode) LIKE @SearchTerm 
-               OR trim(ItemCodeDesc) LIKE @SearchTerm
-            ORDER BY ItemCode";
+                ci.ItemCode,
+                ci.ItemCodeDesc as ItemDescription,
+                ci.ProductLine,
+                ci.ProductType,
+                ci.ProcurementType as Procurement,
+                ci.StandardUnitOfMeasure,
+                ci.UDF_SUB_PRODUCT_FAMILY as SubProductFamily,
+                ci.UDF_STAGED_ITEM as StagedItem,
+                ci.UDF_COATED as Coated,
+                ISNULL(bh.UDF_GOLDEN_STD, 'N') as GoldenStandard
+            FROM CI_Item ci
+            LEFT JOIN BM_BillHeader bh ON ci.ItemCode = bh.BillNo
+            WHERE LTRIM(RTRIM(ci.ItemCode)) LIKE @SearchTerm 
+               OR LTRIM(RTRIM(ci.ItemCodeDesc)) LIKE @SearchTerm
+            ORDER BY ci.ItemCode";
 
         var results = new List<object>();
 

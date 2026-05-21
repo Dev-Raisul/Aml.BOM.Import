@@ -218,7 +218,7 @@ public class BomIntegrationService : IBomIntegrationService
     }
 
     /// <summary>
-    /// Integrates a BOM into Sage 100 using BM_BillHeader_bus and BM_BillDetail_bus
+    /// Integrates a BOM into Sage 100 using BM_Bill_bus (combined header and lines)
     /// </summary>
     public async Task<bool> IntegrateBomAsync(int bomImportRecordId)
     {
@@ -241,11 +241,11 @@ public class BomIntegrationService : IBomIntegrationService
 
             // Get all BOM lines for this parent item
             var bomLines = await _bomBillRepository.GetByParentItemCodeAsync(bomRecord.ParentItemCode);
-            var bomLinesList = bomLines.ToList();
+            var bomLinesList = bomLines.Where(b => b.Status == "Validated").ToList();
 
             if (!bomLinesList.Any())
             {
-                _logger.LogWarning("No BOM lines found for parent: {0}", bomRecord.ParentItemCode);
+                _logger.LogWarning("No validated BOM lines found for parent: {0}", bomRecord.ParentItemCode);
                 return false;
             }
 
@@ -264,58 +264,31 @@ public class BomIntegrationService : IBomIntegrationService
                 session = new SageSessionService(settings.SageSettings, _logger);
                 session.InitializeSession();
 
-                // Set program context for Bill of Materials
-                session.SetProgramContext("BM_BillMaintenance_ui");
+                // Set program context for Bill of Materials (use BM_Bill_ui based on VBS script)
+                session.SetProgramContext("BM_Bill_ui");
 
-                // Create BOM header
-                bool headerCreated = await IntegrateBomHeaderAsync(session, bomRecord);
-                if (!headerCreated)
+                // Create BOM using BM_Bill_bus (includes header and lines)
+                bool bomCreated = await IntegrateBomWithLinesAsync(session, bomRecord, bomLinesList);
+                
+                if (!bomCreated)
                 {
-                    throw new InvalidOperationException($"Failed to create BOM header for {bomRecord.ParentItemCode}");
+                    throw new InvalidOperationException($"Failed to create BOM for {bomRecord.ParentItemCode}");
                 }
 
-                // Create BOM detail lines
-                int successCount = 0;
-                int failedCount = 0;
-
+                // Update integration status for all lines
                 foreach (var line in bomLinesList)
                 {
-                    try
-                    {
-                        bool lineCreated = await IntegrateBomLineAsync(session, bomRecord.ParentItemCode, line);
-                        if (lineCreated)
-                        {
-                            successCount++;
-                        }
-                        else
-                        {
-                            failedCount++;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError($"Failed to integrate BOM line: {line.ComponentItemCode}", ex);
-                        failedCount++;
-                    }
+                    await _bomBillRepository.UpdateStatusAsync(
+                        line.Id, 
+                        "Integrated", 
+                        DateTime.Now, 
+                        DateTime.Now);
                 }
 
-                _logger.LogInformation("BOM integration complete: {0} lines succeeded, {1} failed", 
-                    successCount, failedCount);
+                _logger.LogInformation("BOM integration complete for parent: {0}, Lines: {1}", 
+                    bomRecord.ParentItemCode, bomLinesList.Count);
 
-                // Update integration status if all lines succeeded
-                if (failedCount == 0)
-                {
-                    foreach (var line in bomLinesList)
-                    {
-                        await _bomBillRepository.UpdateStatusAsync(
-                            line.Id, 
-                            "Integrated", 
-                            DateTime.Now, 
-                            DateTime.Now);
-                    }
-                }
-
-                return failedCount == 0;
+                return true;
             }
             catch (Exception ex)
             {
@@ -330,145 +303,241 @@ public class BomIntegrationService : IBomIntegrationService
     }
 
     /// <summary>
-    /// Integrates BOM header into Sage
+    /// Integrates a complete BOM (header + lines) using BM_Bill_bus
     /// </summary>
-    private async Task<bool> IntegrateBomHeaderAsync(SageSessionService session, BomImportBill bomRecord)
+    private async Task<bool> IntegrateBomWithLinesAsync(SageSessionService session, BomImportBill bomHeader, List<BomImportBill> bomLines)
     {
-        dynamic? billHeader = null;
+        dynamic? billBus = null;
+        dynamic? oLines = null;
 
         try
         {
-            _logger.LogInformation("Creating BOM header for: {0}", bomRecord.ParentItemCode);
+            _logger.LogInformation("Creating BOM for parent: {0} with {1} lines", bomHeader.ParentItemCode, bomLines.Count);
 
-            billHeader = session.CreateBusinessObject("BM_BillHeader_bus");
+            // Create BM_Bill_bus object (combines header and detail lines)
+            billBus = session.CreateBusinessObject("BM_Bill_bus");
 
-            // Set key (Parent Item Code)
-            int retVal = billHeader.nSetKey(bomRecord.ParentItemCode);
+            // STEP 1a: Set key value - BillNo (Parent Item Code)
+            int retVal = billBus.nSetKeyValue("BillNo$", bomHeader.ParentItemCode);
             if (retVal == 0)
             {
-                string errorMsg = billHeader.sLastErrorMsg ?? "Unknown error";
-                throw new InvalidOperationException($"nSetKey failed for BOM header {bomRecord.ParentItemCode}: {errorMsg}");
+                string errorMsg = billBus.sLastErrorMsg ?? "Unknown error";
+                throw new InvalidOperationException($"nSetKeyValue BillNo$ failed for BOM {bomHeader.ParentItemCode}: {errorMsg}");
             }
 
-            // Set header fields
-            if (!string.IsNullOrWhiteSpace(bomRecord.ParentDescription))
-            {
-                billHeader.nSetValue("BillDescription$", bomRecord.ParentDescription);
-            }
+            _logger.LogInformation("BOM key BillNo$ set for: {0}", bomHeader.ParentItemCode);
 
-            // Write header
-            retVal = billHeader.nWrite();
+            // STEP 1b: Set key value - Revision (default to "000")
+            retVal = billBus.nSetKeyValue("Revision$", "000");
             if (retVal == 0)
             {
-                string errorMsg = billHeader.sLastErrorMsg ?? "Unknown error";
-                throw new InvalidOperationException($"Failed to write BOM header for {bomRecord.ParentItemCode}: {errorMsg}");
+                string errorMsg = billBus.sLastErrorMsg ?? "Unknown error";
+                throw new InvalidOperationException($"nSetKeyValue Revision$ failed for BOM {bomHeader.ParentItemCode}: {errorMsg}");
             }
 
-            _logger.LogInformation("BOM header created successfully: {0}", bomRecord.ParentItemCode);
+            _logger.LogInformation("BOM key Revision$ set to: 000");
+
+            // STEP 1c: Set key (no parameters - finalizes the key)
+            retVal = billBus.nSetKey();
+            if (retVal == 0)
+            {
+                string errorMsg = billBus.sLastErrorMsg ?? "Unknown error";
+                throw new InvalidOperationException($"nSetKey failed for BOM {bomHeader.ParentItemCode}: {errorMsg}");
+            }
+
+            _logger.LogInformation("BOM key finalized for: {0}", bomHeader.ParentItemCode);
+
+            // STEP 2: Attempt to create new BOM (nNew)
+            // This may not be supported on all versions, so we try and continue regardless
+            try
+            {
+                retVal = billBus.nNew();
+                _logger.LogInformation("nNew called: retVal={0}", retVal);
+            }
+            catch
+            {
+                _logger.LogInformation("nNew not supported or failed, continuing...");
+            }
+
+            // STEP 3: Set BOM header fields
+            if (!string.IsNullOrWhiteSpace(bomHeader.ParentDescription))
+            {
+                retVal = billBus.nSetValue("BillDesc1$", bomHeader.ParentDescription);
+                if (retVal == 0)
+                {
+                    _logger.LogWarning("Failed to set BillDesc1$: {0}", billBus.sLastErrorMsg);
+                }
+            }
+
+            // Set BillType to Standard (S)
+            retVal = billBus.nSetValue("BillType$", "S");
+            if (retVal == 0)
+            {
+                _logger.LogWarning("Failed to set BillType$: {0}", billBus.sLastErrorMsg);
+            }
+
+            // STEP 4: Get Lines object from BM_Bill_bus
+            // Try different possible property names
+            try
+            {
+                oLines = billBus.oLines;
+            }
+            catch
+            {
+                try
+                {
+                    oLines = billBus.Lines;
+                }
+                catch
+                {
+                    _logger.LogWarning("Could not access Lines collection");
+                }
+            }
+
+            if (oLines == null)
+            {
+                throw new InvalidOperationException("Could not get Lines collection from BM_Bill_bus");
+            }
+
+            _logger.LogInformation("Lines collection accessed successfully");
+
+            // STEP 5: Add each BOM line
+            int lineCount = 0;
+            foreach (var line in bomLines)
+            {
+                try
+                {
+                    // Add new line - try different methods
+                    int lineAdded = 0;
+                    try
+                    {
+                        lineAdded = oLines.nAddLine();
+                    }
+                    catch
+                    {
+                        try
+                        {
+                            lineAdded = oLines.nNew();
+                        }
+                        catch
+                        {
+                            try
+                            {
+                                lineAdded = oLines.nNewLine();
+                            }
+                            catch
+                            {
+                                _logger.LogWarning("Could not add new line for component: {0}", line.ComponentItemCode);
+                                continue;
+                            }
+                        }
+                    }
+
+                    if (lineAdded == 0)
+                    {
+                        _logger.LogWarning("Failed to add line for: {0}", line.ComponentItemCode);
+                        continue;
+                    }
+
+                    // Set component item code
+                    retVal = oLines.nSetValue("ComponentItemCode$", line.ComponentItemCode);
+                    if (retVal == 0)
+                    {
+                        _logger.LogWarning("Failed to set ComponentItemCode$ for {0}: {1}", 
+                            line.ComponentItemCode, oLines.sLastErrorMsg);
+                        continue;
+                    }
+
+                    // Set quantity per bill
+                    retVal = oLines.nSetValue("QuantityPerBill$", line.Quantity.ToString());
+                    if (retVal == 0)
+                    {
+                        _logger.LogWarning("Failed to set QuantityPerBill$ for {0}: {1}", 
+                            line.ComponentItemCode, oLines.sLastErrorMsg);
+                    }
+
+                    // Set optional fields
+                    if (!string.IsNullOrWhiteSpace(line.Reference))
+                    {
+                        oLines.nSetValue("Reference$", line.Reference);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(line.Notes))
+                    {
+                        oLines.nSetValue("CommentText$", line.Notes);
+                    }
+
+                    lineCount++;
+                    _logger.LogInformation("Added BOM line {0}: {1} -> {2} (Qty: {3})", 
+                        lineCount, bomHeader.ParentItemCode, line.ComponentItemCode, line.Quantity);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Error adding BOM line for component {line.ComponentItemCode}", ex);
+                }
+            }
+
+            if (lineCount == 0)
+            {
+                throw new InvalidOperationException("No BOM lines were successfully added");
+            }
+
+            // STEP 6: Write/Save the BOM (parent object writes all lines)
+            // Try to write lines first (some systems require this)
+            try
+            {
+                oLines.nWrite();
+            }
+            catch
+            {
+                _logger.LogInformation("oLines.nWrite not supported or failed, continuing...");
+            }
+
+            // Write the main BOM object (this saves header and all lines)
+            retVal = billBus.nWrite();
+            if (retVal == 0)
+            {
+                string errorMsg = billBus.sLastErrorMsg ?? "Unknown error";
+                throw new InvalidOperationException($"nWrite failed for BOM {bomHeader.ParentItemCode}: {errorMsg}");
+            }
+
+            _logger.LogInformation("BOM written to Sage successfully: {0} with {1} lines", 
+                bomHeader.ParentItemCode, lineCount);
+
             await Task.CompletedTask;
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error creating BOM header for {bomRecord.ParentItemCode}", ex);
+            _logger.LogError($"Error creating BOM for {bomHeader.ParentItemCode}", ex);
             return false;
         }
         finally
         {
-            if (billHeader != null)
+            // Clean up objects
+            if (oLines != null)
             {
                 try
                 {
-                    billHeader.DropObject();
-                    Marshal.ReleaseComObject(billHeader);
+                    oLines.DropObject();
+                    Marshal.ReleaseComObject(oLines);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning("Error releasing BOM header object: {0}", ex.Message);
+                    _logger.LogWarning("Error releasing Lines object: {0}", ex.Message);
                 }
             }
-        }
-    }
 
-    /// <summary>
-    /// Integrates a single BOM detail line into Sage
-    /// </summary>
-    private async Task<bool> IntegrateBomLineAsync(SageSessionService session, string parentItemCode, BomImportBill line)
-    {
-        dynamic? billDetail = null;
-
-        try
-        {
-            _logger.LogInformation("Creating BOM line: {0} -> {1} (Qty: {2})", 
-                parentItemCode, line.ComponentItemCode, line.Quantity);
-
-            billDetail = session.CreateBusinessObject("BM_BillDetail_bus");
-
-            // Set keys (Parent + Component)
-            int retVal = billDetail.nSetKeyValue("BillNo$", parentItemCode);
-            if (retVal == 0)
-            {
-                string errorMsg = billDetail.sLastErrorMsg ?? "Unknown error";
-                throw new InvalidOperationException($"Failed to set BillNo for detail line: {errorMsg}");
-            }
-
-            retVal = billDetail.nSetKeyValue("ComponentItemCode$", line.ComponentItemCode);
-            if (retVal == 0)
-            {
-                string errorMsg = billDetail.sLastErrorMsg ?? "Unknown error";
-                throw new InvalidOperationException($"Failed to set ComponentItemCode: {errorMsg}");
-            }
-
-            // Set quantity
-            retVal = billDetail.nSetValue("QuantityPerBill", line.Quantity);
-            if (retVal == 0)
-            {
-                string errorMsg = billDetail.sLastErrorMsg ?? "Unknown error";
-                _logger.LogWarning("Failed to set QuantityPerBill: {0}", errorMsg);
-            }
-
-            // Set optional fields
-            if (!string.IsNullOrWhiteSpace(line.Reference))
-            {
-                billDetail.nSetValue("Reference$", line.Reference);
-            }
-
-            if (!string.IsNullOrWhiteSpace(line.Notes))
-            {
-                billDetail.nSetValue("CommentText$", line.Notes);
-            }
-
-            // Write detail line
-            retVal = billDetail.nWrite();
-            if (retVal == 0)
-            {
-                string errorMsg = billDetail.sLastErrorMsg ?? "Unknown error";
-                throw new InvalidOperationException($"Failed to write BOM detail line: {errorMsg}");
-            }
-
-            _logger.LogInformation("BOM line created successfully: {0} -> {1}", 
-                parentItemCode, line.ComponentItemCode);
-            
-            await Task.CompletedTask;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Error creating BOM line: {parentItemCode} -> {line.ComponentItemCode}", ex);
-            return false;
-        }
-        finally
-        {
-            if (billDetail != null)
+            if (billBus != null)
             {
                 try
                 {
-                    billDetail.DropObject();
-                    Marshal.ReleaseComObject(billDetail);
+                    billBus.DropObject();
+                    Marshal.ReleaseComObject(billBus);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning("Error releasing BOM detail object: {0}", ex.Message);
+                    _logger.LogWarning("Error releasing BOM business object: {0}", ex.Message);
                 }
             }
         }

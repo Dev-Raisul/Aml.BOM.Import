@@ -87,7 +87,9 @@ public partial class App : System.Windows.Application
                     new NewBomsViewModel(
                         sp.GetRequiredService<BomImportService>(),
                         sp.GetRequiredService<IBomImportBillRepository>(),
-                        sp.GetRequiredService<IBomValidationService>()));
+                        sp.GetRequiredService<IBomValidationService>(),
+                        sp.GetRequiredService<IBomIntegrationService>(),
+                        sp.GetRequiredService<ILoggerService>()));
                 services.AddTransient<IntegratedBomsViewModel>();
                 services.AddTransient<DuplicateBomsViewModel>(sp => 
                     new DuplicateBomsViewModel(

@@ -1,4 +1,6 @@
 using Aml.BOM.Import.UI.ViewModels;
+using Aml.BOM.Import.UI.Views;
+using System.Windows;
 
 namespace Aml.BOM.Import.UI;
 
@@ -8,5 +10,14 @@ public partial class MainWindow : System.Windows.Window
     {
         InitializeComponent();
         DataContext = viewModel;
+    }
+
+    private void AboutButton_Click(object sender, RoutedEventArgs e)
+    {
+        var aboutWindow = new AboutWindow
+        {
+            Owner = this
+        };
+        aboutWindow.ShowDialog();
     }
 }

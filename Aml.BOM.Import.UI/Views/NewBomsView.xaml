@@ -23,6 +23,10 @@
                    Command="{Binding RevalidateAllCommand}"
                    Style="{StaticResource SecondaryButtonStyle}"
                    Margin="0,0,10,0"/>
+            <Button Content="Integrate BOMs" 
+                   Command="{Binding IntegrateBomsCommand}"
+                   Style="{StaticResource SuccessButtonStyle}"
+                   Margin="0,0,10,0"/>
             <Button Content="Refresh" 
                    Command="{Binding RefreshCommand}"
                    Style="{StaticResource SecondaryButtonStyle}"/>

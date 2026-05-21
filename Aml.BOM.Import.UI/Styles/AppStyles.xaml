@@ -125,6 +125,36 @@
         </Style.Triggers>
     </Style>
 
+    <!-- Success Button Style -->
+    <Style x:Key="SuccessButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="#4CAF50"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="15,8"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" 
+                           Padding="{TemplateBinding Padding}"
+                           CornerRadius="4">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#45A049"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="#BDC3C7"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- DataGrid Style -->
     <Style TargetType="DataGrid">
         <Setter Property="AutoGenerateColumns" Value="False"/>

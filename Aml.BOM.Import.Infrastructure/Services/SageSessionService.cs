@@ -66,7 +66,7 @@ public class SageSessionService : IDisposable
 
             // STEP 1: Create ProvideX.Script object
             _logger.LogInformation("[STEP 1] Creating ProvideX.Script COM object");
-            Type? providexType = Type.GetTypeFromProgID("ProvideX.Script");
+            Type? providexType = Type.GetTypeFromProgID("ProvideX.Script.1");
             if (providexType == null)
             {
                 throw new InvalidOperationException(

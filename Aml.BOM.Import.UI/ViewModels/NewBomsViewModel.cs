@@ -13,6 +13,8 @@ public partial class NewBomsViewModel : ObservableObject
     private readonly BomImportService _bomImportService;
     private readonly IBomImportBillRepository _bomBillRepository;
     private readonly IBomValidationService _validationService;
+    private readonly IBomIntegrationService _bomIntegrationService;
+    private readonly ILoggerService _logger;
 
     [ObservableProperty]
     private ObservableCollection<object> _boms = new();
@@ -47,11 +49,15 @@ public partial class NewBomsViewModel : ObservableObject
     public NewBomsViewModel(
         BomImportService bomImportService, 
         IBomImportBillRepository bomBillRepository,
-        IBomValidationService validationService)
+        IBomValidationService validationService,
+        IBomIntegrationService bomIntegrationService,
+        ILoggerService logger)
     {
         _bomImportService = bomImportService;
         _bomBillRepository = bomBillRepository;
         _validationService = validationService;
+        _bomIntegrationService = bomIntegrationService;
+        _logger = logger;
         LoadBomsCommand.Execute(null);
     }
 
@@ -230,5 +236,156 @@ public partial class NewBomsViewModel : ObservableObject
     private async Task Refresh()
     {
         await LoadBoms();
+    }
+
+    [RelayCommand]
+    private async Task IntegrateBoms()
+    {
+        IsLoading = true;
+        StatusMessage = "Preparing BOMs for integration...";
+        
+        try
+        {
+            // Get count of BOMs ready to integrate (Validated status)
+            var validatedCount = await _bomBillRepository.GetCountByStatusAsync("Validated");
+            
+            if (validatedCount == 0)
+            {
+                System.Windows.MessageBox.Show(
+                    "No BOMs are ready for integration.\n\n" +
+                    "BOMs must be validated and cannot contain:\n" +
+                    "• New buy items (must be created in Sage first)\n" +
+                    "• New make items that haven't been integrated",
+                    "No BOMs Ready",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+                
+                StatusMessage = "No BOMs ready for integration";
+                return;
+            }
+
+            var result = System.Windows.MessageBox.Show(
+                $"Ready to integrate {validatedCount} validated BOM(s) into Sage 100.\n\n" +
+                $"This will create Bill of Materials in Sage using COM integration.\n\n" +
+                $"Continue?",
+                "Integrate BOMs to Sage",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Question);
+
+            if (result == System.Windows.MessageBoxResult.No)
+            {
+                StatusMessage = "BOM integration cancelled";
+                return;
+            }
+
+            StatusMessage = "Integrating BOMs into Sage 100...";
+            
+            // Get all validated BOM records grouped by parent item
+            var validatedBills = await _bomBillRepository.GetByStatusAsync("Validated");
+            var bomGroups = validatedBills.GroupBy(b => b.ParentItemCode).ToList();
+
+            int successCount = 0;
+            int failedCount = 0;
+            var errors = new List<string>();
+
+            foreach (var bomGroup in bomGroups)
+            {
+                try
+                {
+                    var parentItem = bomGroup.Key;
+                    var firstBill = bomGroup.First();
+                    
+                    _logger.LogInformation("Integrating BOM for parent: {0}", parentItem);
+                    
+                    // Integrate the BOM (using the first record ID to get header info)
+                    bool success = await _bomIntegrationService.IntegrateBomAsync(firstBill.Id);
+                    
+                    if (success)
+                    {
+                        successCount++;
+                        _logger.LogInformation("BOM integrated successfully: {0}", parentItem);
+                    }
+                    else
+                    {
+                        failedCount++;
+                        errors.Add($"{parentItem}: Integration failed");
+                        _logger.LogWarning("BOM integration failed: {0}", parentItem);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    failedCount++;
+                    var parentItem = bomGroup.Key ?? "Unknown";
+                    errors.Add($"{parentItem}: {ex.Message}");
+                    _logger.LogError($"Failed to integrate BOM for parent {parentItem}", ex);
+                }
+            }
+
+            // Reload BOMs to reflect updated statuses
+            await LoadBoms();
+
+            if (failedCount == 0)
+            {
+                StatusMessage = $"Successfully integrated {successCount} BOM(s) into Sage 100";
+                System.Windows.MessageBox.Show(
+                    $"BOM Integration Complete!\n\n" +
+                    $"Successfully integrated {successCount} BOM(s) into Sage 100.\n\n" +
+                    $"The BOMs have been created in the Bill of Materials module.",
+                    "Integration Successful",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            else
+            {
+                StatusMessage = $"Integration completed with errors: {successCount} succeeded, {failedCount} failed";
+                
+                var errorDetails = errors.Count > 5 
+                    ? string.Join("\n", errors.Take(5)) + $"\n... and {errors.Count - 5} more errors"
+                    : string.Join("\n", errors);
+                
+                System.Windows.MessageBox.Show(
+                    $"BOM Integration Partial Success\n\n" +
+                    $"Successful: {successCount}\n" +
+                    $"Failed: {failedCount}\n\n" +
+                    $"Errors:\n{errorDetails}\n\n" +
+                    $"Check the logs for detailed error information.",
+                    "Integration Partial Success",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+            }
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Sage settings"))
+        {
+            StatusMessage = "Sage settings not configured";
+            System.Windows.MessageBox.Show(
+                "Sage 100 settings are not configured.\n\n" +
+                "Please go to Settings and configure:\n" +
+                "• Sage Home Directory\n" +
+                "• Username\n" +
+                "• Password\n" +
+                "• Company Code",
+                "Configuration Required",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error during BOM integration: {ex.Message}";
+            System.Windows.MessageBox.Show(
+                $"BOM integration failed:\n\n{ex.Message}\n\n" +
+                $"Please check:\n" +
+                $"• Sage 100 is installed and accessible\n" +
+                $"• Sage settings are correct\n" +
+                $"• You have permission to create BOMs\n" +
+                $"• Parent items exist in Sage\n" +
+                $"• All component items exist in Sage",
+                "Integration Error",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 }

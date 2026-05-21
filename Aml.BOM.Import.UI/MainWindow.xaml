@@ -77,10 +77,19 @@ WindowStartupLocation="CenterScreen">
 
                 <Button Command="{Binding NavigateCommand}"
                        CommandParameter="Settings"
-                       Style="{StaticResource NavigationButtonStyle}">
+                       Style="{StaticResource NavigationButtonStyle}"
+                       Margin="0,0,0,5">
                     <StackPanel Orientation="Horizontal">
                         <iconPacks:PackIconMaterial Kind="Cog" Width="16" Height="16" Margin="0,0,8,0"/>
                         <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Click="AboutButton_Click"
+                       Style="{StaticResource NavigationButtonStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <iconPacks:PackIconMaterial Kind="Information" Width="16" Height="16" Margin="0,0,8,0"/>
+                        <TextBlock Text="About" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
             </StackPanel>
