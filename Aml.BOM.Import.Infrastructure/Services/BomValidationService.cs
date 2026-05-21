@@ -8,17 +8,20 @@ public class BomValidationService : IBomValidationService
     private readonly ISageItemRepository _sageItemRepository;
     private readonly IBomImportBillRepository _billRepository;
     private readonly IImportBomFileLogRepository _fileLogRepository;
+    private readonly INewMakeItemRepository _newMakeItemRepository;
     private readonly ILoggerService _logger;
 
     public BomValidationService(
         ISageItemRepository sageItemRepository,
         IBomImportBillRepository billRepository,
         IImportBomFileLogRepository fileLogRepository,
+        INewMakeItemRepository newMakeItemRepository,
         ILoggerService logger)
     {
         _sageItemRepository = sageItemRepository;
         _billRepository = billRepository;
         _fileLogRepository = fileLogRepository;
+        _newMakeItemRepository = newMakeItemRepository;
         _logger = logger;
     }
 
@@ -174,6 +177,20 @@ public class BomValidationService : IBomValidationService
             // Build status summary
             var summary = await _billRepository.GetStatusSummaryAsync();
             result.StatusSummary = summary;
+
+            // Copy newly identified make items into the dedicated isBOMImport_NewMakeItems table.
+            // Items already present (from a prior import) are silently skipped.
+            try
+            {
+                var copiedCount = await _newMakeItemRepository.CopyFromBillsAsync(fileName);
+                _logger.LogInformation("Copied {0} new make item(s) to isBOMImport_NewMakeItems for file: {1}",
+                    copiedCount, fileName);
+            }
+            catch (Exception ex)
+            {
+                // Log but do not fail the overall validation result
+                _logger.LogWarning("Failed to copy new make items to isBOMImport_NewMakeItems: {0}", ex.Message);
+            }
 
             _logger.LogInformation("Validation complete for file: {0}. Validated: {1}, Failed: {2}, Duplicates: {3}",
                 fileName, result.ValidatedRecords, result.FailedRecords, result.DuplicateBoms);

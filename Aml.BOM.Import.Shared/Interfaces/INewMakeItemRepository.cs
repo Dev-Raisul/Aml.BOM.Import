@@ -10,4 +10,11 @@ public interface INewMakeItemRepository
     Task<IEnumerable<object>> GetByStatusAsync(int status);
     Task BulkUpdateFieldAsync(IEnumerable<int> itemIds, string fieldName, object value);
     Task MarkAsIntegratedAsync(string itemCode, string importFileName);
+
+    /// <summary>
+    /// Copies all new make items from isBOMImportBills for the given import file into
+    /// isBOMImport_NewMakeItems.  Only the first occurrence of each unique item code is
+    /// inserted; items that already exist in the table are skipped.
+    /// </summary>
+    Task<int> CopyFromBillsAsync(string importFileName);
 }

@@ -167,7 +167,9 @@ public class NewMakeItem : INotifyPropertyChanged
     public string? IntegratedBy { get; set; }
     
     public DateTime CreatedDate { get; set; }
+    public string CreatedWindowsUser { get; set; } = string.Empty;
     public DateTime ModifiedDate { get; set; }
+    public string ModifiedWindowsUser { get; set; } = string.Empty;
 
     // Legacy fields (for compatibility)
     public string? LongDescription { get; set; }

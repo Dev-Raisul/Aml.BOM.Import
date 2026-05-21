@@ -60,6 +60,7 @@ public partial class App : System.Windows.Application
                         sp.GetRequiredService<ISageItemRepository>(),
                         sp.GetRequiredService<IBomImportBillRepository>(),
                         sp.GetRequiredService<IImportBomFileLogRepository>(),
+                        sp.GetRequiredService<INewMakeItemRepository>(),
                         sp.GetRequiredService<ILoggerService>()));
                 services.AddSingleton<IBomIntegrationService>(sp =>
                     new BomIntegrationService(
