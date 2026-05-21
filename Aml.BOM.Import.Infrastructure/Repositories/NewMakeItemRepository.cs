@@ -14,6 +14,39 @@ public class NewMakeItemRepository : INewMakeItemRepository
         _connectionString = connectionString;
     }
 
+    // -------------------------------------------------------------------------
+    // Read helpers
+    // -------------------------------------------------------------------------
+
+    private static NewMakeItem MapRow(SqlDataReader reader) => new()
+    {
+        Id                    = reader.GetInt32("Id"),
+        ItemCode              = reader.GetString("ItemCode"),
+        ImportFileName        = reader.GetString("ImportFileName"),
+        ImportFileDate        = reader.GetDateTime("ImportDate"),
+        ItemDescription       = reader.IsDBNull("ItemDescription") ? string.Empty : reader.GetString("ItemDescription"),
+        ProductLine           = reader.IsDBNull("ProductLine") ? string.Empty : reader.GetString("ProductLine"),
+        ProductType           = reader.GetString("ProductType"),
+        Procurement           = reader.GetString("Procurement"),
+        StandardUnitOfMeasure = reader.GetString("StandardUnitOfMeasure"),
+        SubProductFamily      = reader.IsDBNull("SubProductFamily") ? string.Empty : reader.GetString("SubProductFamily"),
+        StagedItem            = reader.GetBoolean("StagedItem"),
+        Coated                = reader.GetBoolean("Coated"),
+        GoldenStandard        = reader.GetBoolean("GoldenStandard"),
+        IsIntegrated          = reader.GetBoolean("IsIntegrated"),
+        IntegratedDate        = reader.IsDBNull("DateIntegrated") ? null : reader.GetDateTime("DateIntegrated"),
+        IntegratedBy          = reader.IsDBNull("IntegratedBy") ? null : reader.GetString("IntegratedBy"),
+        CreatedDate           = reader.GetDateTime("CreatedDate"),
+        CreatedWindowsUser    = reader.GetString("CreatedWindowsUser"),
+        ModifiedDate          = reader.GetDateTime("ModifiedDate"),
+        ModifiedWindowsUser   = reader.GetString("ModifiedWindowsUser"),
+        IsEdited              = false
+    };
+
+    // -------------------------------------------------------------------------
+    // GetAllAsync – reads from isBOMImport_NewMakeItems
+    // -------------------------------------------------------------------------
+
     public async Task<IEnumerable<object>> GetAllAsync()
     {
         var items = new List<NewMakeItem>();
@@ -23,48 +56,21 @@ public class NewMakeItemRepository : INewMakeItemRepository
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            var query = @"
-                SELECT DISTINCT
-                    ComponentItemCode AS ItemCode,
-                    ComponentDescription AS ItemDescription,
-                    ImportFileName,
-                    ImportDate AS ImportFileDate,
-                    MIN(Id) AS Id,
-                    MAX(DateValidated) AS CreatedDate,
-                    MAX(DateValidated) AS ModifiedDate
-                FROM isBOMImportBills
-                WHERE Status = 'NewMakeItem'
-                GROUP BY ComponentItemCode, ComponentDescription, ImportFileName, ImportDate
-                ORDER BY ImportDate DESC, ComponentItemCode";
+            const string query = @"
+                SELECT
+                    Id, ItemCode, ImportFileName, ImportDate, ItemDescription,
+                    ProductLine, ProductType, Procurement, StandardUnitOfMeasure,
+                    SubProductFamily, StagedItem, Coated, GoldenStandard,
+                    IsIntegrated, DateIntegrated, IntegratedBy,
+                    CreatedDate, CreatedWindowsUser, ModifiedDate, ModifiedWindowsUser
+                FROM dbo.isBOMImport_NewMakeItems
+                ORDER BY ImportDate DESC, ItemCode";
 
             using var command = new SqlCommand(query, connection);
-            using var reader = await command.ExecuteReaderAsync();
+            using var reader  = await command.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
-            {
-                var item = new NewMakeItem
-                {
-                    Id = reader.GetInt32("Id"),
-                    ItemCode = reader.GetString("ItemCode"),
-                    ItemDescription = reader.IsDBNull("ItemDescription") ? string.Empty : reader.GetString("ItemDescription"),
-                    ImportFileName = reader.GetString("ImportFileName"),
-                    ImportFileDate = reader.GetDateTime("ImportFileDate"),
-                    ProductLine = string.Empty,
-                    ProductType = "F",
-                    Procurement = "M",
-                    StandardUnitOfMeasure = "EACH",
-                    SubProductFamily = string.Empty,
-                    StagedItem = false,
-                    Coated = false,
-                    GoldenStandard = false,
-                    IsEdited = false,
-                    IsIntegrated = false,
-                    CreatedDate = reader.IsDBNull("CreatedDate") ? DateTime.Now : reader.GetDateTime("CreatedDate"),
-                    ModifiedDate = reader.IsDBNull("ModifiedDate") ? DateTime.Now : reader.GetDateTime("ModifiedDate")
-                };
-
-                items.Add(item);
-            }
+                items.Add(MapRow(reader));
         }
         catch (Exception ex)
         {
@@ -74,6 +80,10 @@ public class NewMakeItemRepository : INewMakeItemRepository
         return items;
     }
 
+    // -------------------------------------------------------------------------
+    // GetByIdAsync – reads from isBOMImport_NewMakeItems
+    // -------------------------------------------------------------------------
+
     public async Task<object?> GetByIdAsync(int id)
     {
         try
@@ -81,19 +91,15 @@ public class NewMakeItemRepository : INewMakeItemRepository
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            var query = @"
-                SELECT DISTINCT
-                    ComponentItemCode AS ItemCode,
-                    ComponentDescription AS ItemDescription,
-                    ImportFileName,
-                    ImportDate AS ImportFileDate,
-                    MIN(Id) AS Id,
-                    MAX(DateValidated) AS CreatedDate,
-                    MAX(DateValidated) AS ModifiedDate
-                FROM isBOMImportBills
-                WHERE Status = 'NewMakeItem'
-                  AND Id = @Id
-                GROUP BY ComponentItemCode, ComponentDescription, ImportFileName, ImportDate";
+            const string query = @"
+                SELECT
+                    Id, ItemCode, ImportFileName, ImportDate, ItemDescription,
+                    ProductLine, ProductType, Procurement, StandardUnitOfMeasure,
+                    SubProductFamily, StagedItem, Coated, GoldenStandard,
+                    IsIntegrated, DateIntegrated, IntegratedBy,
+                    CreatedDate, CreatedWindowsUser, ModifiedDate, ModifiedWindowsUser
+                FROM dbo.isBOMImport_NewMakeItems
+                WHERE Id = @Id";
 
             using var command = new SqlCommand(query, connection);
             command.Parameters.AddWithValue("@Id", id);
@@ -101,28 +107,7 @@ public class NewMakeItemRepository : INewMakeItemRepository
             using var reader = await command.ExecuteReaderAsync();
 
             if (await reader.ReadAsync())
-            {
-                return new NewMakeItem
-                {
-                    Id = reader.GetInt32("Id"),
-                    ItemCode = reader.GetString("ItemCode"),
-                    ItemDescription = reader.IsDBNull("ItemDescription") ? string.Empty : reader.GetString("ItemDescription"),
-                    ImportFileName = reader.GetString("ImportFileName"),
-                    ImportFileDate = reader.GetDateTime("ImportFileDate"),
-                    ProductLine = string.Empty,
-                    ProductType = "F",
-                    Procurement = "M",
-                    StandardUnitOfMeasure = "EACH",
-                    SubProductFamily = string.Empty,
-                    StagedItem = false,
-                    Coated = false,
-                    GoldenStandard = false,
-                    IsEdited = false,
-                    IsIntegrated = false,
-                    CreatedDate = reader.IsDBNull("CreatedDate") ? DateTime.Now : reader.GetDateTime("CreatedDate"),
-                    ModifiedDate = reader.IsDBNull("ModifiedDate") ? DateTime.Now : reader.GetDateTime("ModifiedDate")
-                };
-            }
+                return MapRow(reader);
         }
         catch (Exception ex)
         {
@@ -131,6 +116,10 @@ public class NewMakeItemRepository : INewMakeItemRepository
 
         return null;
     }
+
+    // -------------------------------------------------------------------------
+    // AddAsync – insert a single item into isBOMImport_NewMakeItems
+    // -------------------------------------------------------------------------
 
     public async Task<int> AddAsync(object newMakeItem)
     {
@@ -142,34 +131,37 @@ public class NewMakeItemRepository : INewMakeItemRepository
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            var query = @"
-                INSERT INTO isBOMImportBills 
+            const string query = @"
+                INSERT INTO dbo.isBOMImport_NewMakeItems
                 (
-                    ImportFileName,
-                    ImportDate,
-                    ComponentItemCode,
-                    ComponentDescription,
-                    Status,
-                    ItemExists,
-                    DateValidated
+                    ItemCode, ImportFileName, ImportDate, ItemDescription,
+                    ProductLine, ProductType, Procurement, StandardUnitOfMeasure,
+                    SubProductFamily, StagedItem, Coated, GoldenStandard,
+                    IsIntegrated, CreatedDate, CreatedWindowsUser, ModifiedDate, ModifiedWindowsUser
                 )
-                VALUES 
+                VALUES
                 (
-                    @ImportFileName,
-                    @ImportFileDate,
-                    @ItemCode,
-                    @ItemDescription,
-                    'NewMakeItem',
-                    0,
-                    GETDATE()
+                    @ItemCode, @ImportFileName, @ImportDate, @ItemDescription,
+                    @ProductLine, @ProductType, @Procurement, @StandardUnitOfMeasure,
+                    @SubProductFamily, @StagedItem, @Coated, @GoldenStandard,
+                    0, GETDATE(), @WindowsUser, GETDATE(), @WindowsUser
                 );
                 SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
             using var command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@ImportFileName", item.ImportFileName);
-            command.Parameters.AddWithValue("@ImportFileDate", item.ImportFileDate);
-            command.Parameters.AddWithValue("@ItemCode", item.ItemCode);
-            command.Parameters.AddWithValue("@ItemDescription", (object?)item.ItemDescription ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ItemCode",              item.ItemCode);
+            command.Parameters.AddWithValue("@ImportFileName",        item.ImportFileName);
+            command.Parameters.AddWithValue("@ImportDate",            item.ImportFileDate);
+            command.Parameters.AddWithValue("@ItemDescription",       (object?)item.ItemDescription ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ProductLine",           (object?)item.ProductLine ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ProductType",           item.ProductType);
+            command.Parameters.AddWithValue("@Procurement",           item.Procurement);
+            command.Parameters.AddWithValue("@StandardUnitOfMeasure", item.StandardUnitOfMeasure);
+            command.Parameters.AddWithValue("@SubProductFamily",      (object?)item.SubProductFamily ?? DBNull.Value);
+            command.Parameters.AddWithValue("@StagedItem",            item.StagedItem);
+            command.Parameters.AddWithValue("@Coated",                item.Coated);
+            command.Parameters.AddWithValue("@GoldenStandard",        item.GoldenStandard);
+            command.Parameters.AddWithValue("@WindowsUser",           Environment.UserName);
 
             var newId = await command.ExecuteScalarAsync();
             return Convert.ToInt32(newId);
@@ -179,6 +171,11 @@ public class NewMakeItemRepository : INewMakeItemRepository
             throw new Exception($"Error adding new make item: {ex.Message}", ex);
         }
     }
+
+    // -------------------------------------------------------------------------
+    // UpdateAsync – update the editable fields in isBOMImport_NewMakeItems
+    //              whenever the user edits an item in the Make Items view.
+    // -------------------------------------------------------------------------
 
     public async Task UpdateAsync(object newMakeItem)
     {
@@ -190,23 +187,34 @@ public class NewMakeItemRepository : INewMakeItemRepository
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            // Update all records with this component item code from the same import file
-            var query = @"
-                UPDATE isBOMImportBills
-                SET 
-                    ComponentDescription = @ItemDescription,
-                    ValidationMessage = @ValidationMessage,
-                    DateValidated = GETDATE()
-                WHERE Status = 'NewMakeItem'
-                  AND ComponentItemCode = @ItemCode
-                  AND ImportFileName = @ImportFileName";
+            const string query = @"
+                UPDATE dbo.isBOMImport_NewMakeItems
+                SET
+                    ItemDescription       = @ItemDescription,
+                    ProductLine           = @ProductLine,
+                    ProductType           = @ProductType,
+                    Procurement           = @Procurement,
+                    StandardUnitOfMeasure = @StandardUnitOfMeasure,
+                    SubProductFamily      = @SubProductFamily,
+                    StagedItem            = @StagedItem,
+                    Coated                = @Coated,
+                    GoldenStandard        = @GoldenStandard,
+                    ModifiedDate          = GETDATE(),
+                    ModifiedWindowsUser   = @ModifiedWindowsUser
+                WHERE ItemCode = @ItemCode";
 
             using var command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@ItemCode", item.ItemCode);
-            command.Parameters.AddWithValue("@ImportFileName", item.ImportFileName);
-            command.Parameters.AddWithValue("@ItemDescription", (object?)item.ItemDescription ?? DBNull.Value);
-            command.Parameters.AddWithValue("@ValidationMessage", 
-                item.IsEdited ? "Item edited - ready for review" : "New make item identified");
+            command.Parameters.AddWithValue("@ItemCode",              item.ItemCode);
+            command.Parameters.AddWithValue("@ItemDescription",       (object?)item.ItemDescription ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ProductLine",           (object?)item.ProductLine ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ProductType",           item.ProductType);
+            command.Parameters.AddWithValue("@Procurement",           item.Procurement);
+            command.Parameters.AddWithValue("@StandardUnitOfMeasure", item.StandardUnitOfMeasure);
+            command.Parameters.AddWithValue("@SubProductFamily",      (object?)item.SubProductFamily ?? DBNull.Value);
+            command.Parameters.AddWithValue("@StagedItem",            item.StagedItem);
+            command.Parameters.AddWithValue("@Coated",                item.Coated);
+            command.Parameters.AddWithValue("@GoldenStandard",        item.GoldenStandard);
+            command.Parameters.AddWithValue("@ModifiedWindowsUser",   Environment.UserName);
 
             await command.ExecuteNonQueryAsync();
         }
@@ -216,6 +224,10 @@ public class NewMakeItemRepository : INewMakeItemRepository
         }
     }
 
+    // -------------------------------------------------------------------------
+    // DeleteAsync
+    // -------------------------------------------------------------------------
+
     public async Task DeleteAsync(int id)
     {
         try
@@ -223,9 +235,7 @@ public class NewMakeItemRepository : INewMakeItemRepository
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            var query = @"
-                DELETE FROM isBOMImportBills
-                WHERE Id = @Id AND Status = 'NewMakeItem'";
+            const string query = "DELETE FROM dbo.isBOMImport_NewMakeItems WHERE Id = @Id";
 
             using var command = new SqlCommand(query, connection);
             command.Parameters.AddWithValue("@Id", id);
@@ -238,39 +248,56 @@ public class NewMakeItemRepository : INewMakeItemRepository
         }
     }
 
+    // -------------------------------------------------------------------------
+    // GetByStatusAsync – kept for interface compatibility; returns all items
+    //                    (the dedicated table has no separate status column)
+    // -------------------------------------------------------------------------
+
     public async Task<IEnumerable<object>> GetByStatusAsync(int status)
     {
-        // For make items, status is always "NewMakeItem"
-        // This parameter is kept for interface compatibility
         return await GetAllAsync();
     }
 
+    // -------------------------------------------------------------------------
+    // BulkUpdateFieldAsync – update a single column for a set of item IDs
+    // -------------------------------------------------------------------------
+
     public async Task BulkUpdateFieldAsync(IEnumerable<int> itemIds, string fieldName, object value)
     {
-        if (!itemIds.Any())
+        var idList = itemIds.ToList();
+        if (!idList.Any())
             return;
+
+        // Map property names to database columns
+        var columnName = fieldName switch
+        {
+            nameof(NewMakeItem.ItemDescription)       => "ItemDescription",
+            nameof(NewMakeItem.ProductLine)           => "ProductLine",
+            nameof(NewMakeItem.ProductType)           => "ProductType",
+            nameof(NewMakeItem.Procurement)           => "Procurement",
+            nameof(NewMakeItem.StandardUnitOfMeasure) => "StandardUnitOfMeasure",
+            nameof(NewMakeItem.SubProductFamily)      => "SubProductFamily",
+            nameof(NewMakeItem.StagedItem)            => "StagedItem",
+            nameof(NewMakeItem.Coated)                => "Coated",
+            nameof(NewMakeItem.GoldenStandard)        => "GoldenStandard",
+            _ => throw new ArgumentException($"Bulk update not supported for field: {fieldName}")
+        };
 
         try
         {
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            // Map field names to database columns
-            var columnName = fieldName switch
-            {
-                nameof(NewMakeItem.ItemDescription) => "ComponentDescription",
-                _ => throw new ArgumentException($"Bulk update not supported for field: {fieldName}")
-            };
-
             var query = $@"
-                UPDATE isBOMImportBills
-                SET {columnName} = @Value,
-                    DateValidated = GETDATE()
-                WHERE Id IN ({string.Join(",", itemIds)})
-                  AND Status = 'NewMakeItem'";
+                UPDATE dbo.isBOMImport_NewMakeItems
+                SET {columnName}         = @Value,
+                    ModifiedDate         = GETDATE(),
+                    ModifiedWindowsUser  = @ModifiedWindowsUser
+                WHERE Id IN ({string.Join(",", idList)})";
 
             using var command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@Value", value ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Value",               value ?? DBNull.Value);
+            command.Parameters.AddWithValue("@ModifiedWindowsUser", Environment.UserName);
 
             await command.ExecuteNonQueryAsync();
         }
@@ -280,93 +307,10 @@ public class NewMakeItemRepository : INewMakeItemRepository
         }
     }
 
-    public async Task<int> GetCountByImportFileAsync(string importFileName)
-    {
-        try
-        {
-            using var connection = new SqlConnection(_connectionString);
-            await connection.OpenAsync();
-
-            var query = @"
-                SELECT COUNT(DISTINCT ComponentItemCode)
-                FROM isBOMImportBills
-                WHERE Status = 'NewMakeItem'
-                  AND ImportFileName = @ImportFileName";
-
-            using var command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@ImportFileName", importFileName);
-
-            var count = await command.ExecuteScalarAsync();
-            return Convert.ToInt32(count);
-        }
-        catch (Exception ex)
-        {
-            throw new Exception($"Error getting count by import file: {ex.Message}", ex);
-        }
-    }
-
-    public async Task<IEnumerable<object>> GetByImportFileAsync(string importFileName)
-    {
-        var items = new List<NewMakeItem>();
-
-        try
-        {
-            using var connection = new SqlConnection(_connectionString);
-            await connection.OpenAsync();
-
-            var query = @"
-                SELECT DISTINCT
-                    ComponentItemCode AS ItemCode,
-                    ComponentDescription AS ItemDescription,
-                    ImportFileName,
-                    ImportDate AS ImportFileDate,
-                    MIN(Id) AS Id,
-                    MAX(DateValidated) AS CreatedDate,
-                    MAX(DateValidated) AS ModifiedDate
-                FROM isBOMImportBills
-                WHERE Status = 'NewMakeItem'
-                  AND ImportFileName = @ImportFileName
-                GROUP BY ComponentItemCode, ComponentDescription, ImportFileName, ImportDate
-                ORDER BY ComponentItemCode";
-
-            using var command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@ImportFileName", importFileName);
-
-            using var reader = await command.ExecuteReaderAsync();
-
-            while (await reader.ReadAsync())
-            {
-                var item = new NewMakeItem
-                {
-                    Id = reader.GetInt32("Id"),
-                    ItemCode = reader.GetString("ItemCode"),
-                    ItemDescription = reader.IsDBNull("ItemDescription") ? string.Empty : reader.GetString("ItemDescription"),
-                    ImportFileName = reader.GetString("ImportFileName"),
-                    ImportFileDate = reader.GetDateTime("ImportFileDate"),
-                    ProductLine = string.Empty,
-                    ProductType = "F",
-                    Procurement = "M",
-                    StandardUnitOfMeasure = "EACH",
-                    SubProductFamily = string.Empty,
-                    StagedItem = false,
-                    Coated = false,
-                    GoldenStandard = false,
-                    IsEdited = false,
-                    IsIntegrated = false,
-                    CreatedDate = reader.IsDBNull("CreatedDate") ? DateTime.Now : reader.GetDateTime("CreatedDate"),
-                    ModifiedDate = reader.IsDBNull("ModifiedDate") ? DateTime.Now : reader.GetDateTime("ModifiedDate")
-                };
-
-                items.Add(item);
-            }
-        }
-        catch (Exception ex)
-        {
-            throw new Exception($"Error retrieving new make items by import file: {ex.Message}", ex);
-        }
-
-        return items;
-    }
+    // -------------------------------------------------------------------------
+    // MarkAsIntegratedAsync – set integration details on isBOMImport_NewMakeItems
+    //                         and update Status on isBOMImportBills
+    // -------------------------------------------------------------------------
 
     public async Task MarkAsIntegratedAsync(string itemCode, string importFileName)
     {
@@ -375,26 +319,128 @@ public class NewMakeItemRepository : INewMakeItemRepository
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
 
-            var query = @"
-                UPDATE isBOMImportBills
-                SET 
-                    Status = 'Integrated',
-                    DateIntegrated = GETDATE(),
-                    IntegratedBy = @IntegratedBy
-                WHERE ComponentItemCode = @ItemCode
-                  AND ImportFileName = @ImportFileName
-                  AND Status = 'NewMakeItem'";
+            using var transaction = connection.BeginTransaction();
 
-            using var command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@ItemCode", itemCode);
-            command.Parameters.AddWithValue("@ImportFileName", importFileName);
-            command.Parameters.AddWithValue("@IntegratedBy", Environment.UserName);
+            try
+            {
+                // 1. Update the dedicated new make items table
+                const string updateNewMakeItems = @"
+                    UPDATE dbo.isBOMImport_NewMakeItems
+                    SET IsIntegrated        = 1,
+                        DateIntegrated      = GETDATE(),
+                        IntegratedBy        = @IntegratedBy,
+                        ModifiedDate        = GETDATE(),
+                        ModifiedWindowsUser = @IntegratedBy
+                    WHERE ItemCode = @ItemCode";
 
-            await command.ExecuteNonQueryAsync();
+                using (var cmd = new SqlCommand(updateNewMakeItems, connection, transaction))
+                {
+                    cmd.Parameters.AddWithValue("@ItemCode",    itemCode);
+                    cmd.Parameters.AddWithValue("@IntegratedBy", Environment.UserName);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                // 2. Keep isBOMImportBills in sync
+                const string updateBills = @"
+                    UPDATE dbo.isBOMImportBills
+                    SET Status        = 'Integrated',
+                        DateIntegrated = GETDATE(),
+                        IntegratedBy  = @IntegratedBy
+                    WHERE ComponentItemCode = @ItemCode
+                      AND ImportFileName    = @ImportFileName
+                      AND Status            = 'NewMakeItem'";
+
+                using (var cmd = new SqlCommand(updateBills, connection, transaction))
+                {
+                    cmd.Parameters.AddWithValue("@ItemCode",      itemCode);
+                    cmd.Parameters.AddWithValue("@ImportFileName", importFileName);
+                    cmd.Parameters.AddWithValue("@IntegratedBy",  Environment.UserName);
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
         catch (Exception ex)
         {
             throw new Exception($"Error marking item as integrated: {ex.Message}", ex);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // CopyFromBillsAsync – copy all new make items identified during the import
+    //                      of @importFileName into isBOMImport_NewMakeItems.
+    //                      Only the first occurrence of each unique item code is
+    //                      inserted; existing entries are left untouched.
+    // -------------------------------------------------------------------------
+
+    public async Task<int> CopyFromBillsAsync(string importFileName)
+    {
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            const string query = @"
+                INSERT INTO dbo.isBOMImport_NewMakeItems
+                (
+                    ItemCode, ImportFileName, ImportDate, ItemDescription,
+                    ProductLine, ProductType, Procurement, StandardUnitOfMeasure,
+                    SubProductFamily, StagedItem, Coated, GoldenStandard,
+                    IsIntegrated, CreatedDate, CreatedWindowsUser, ModifiedDate, ModifiedWindowsUser
+                )
+                SELECT
+                    src.ComponentItemCode,
+                    src.ImportFileName,
+                    src.ImportDate,
+                    src.ComponentDescription,
+                    NULL  AS ProductLine,
+                    'F'   AS ProductType,
+                    'M'   AS Procurement,
+                    'EACH' AS StandardUnitOfMeasure,
+                    NULL  AS SubProductFamily,
+                    0     AS StagedItem,
+                    0     AS Coated,
+                    0     AS GoldenStandard,
+                    0     AS IsIntegrated,
+                    GETDATE()    AS CreatedDate,
+                    @WindowsUser AS CreatedWindowsUser,
+                    GETDATE()    AS ModifiedDate,
+                    @WindowsUser AS ModifiedWindowsUser
+                FROM
+                (
+                    SELECT
+                        b.ComponentItemCode,
+                        b.ImportFileName,
+                        b.ImportDate,
+                        b.ComponentDescription,
+                        ROW_NUMBER() OVER (PARTITION BY b.ComponentItemCode ORDER BY b.Id ASC) AS rn
+                    FROM dbo.isBOMImportBills b
+                    WHERE b.ImportFileName = @ImportFileName
+                      AND b.Status         = 'NewMakeItem'
+                ) src
+                WHERE src.rn = 1
+                  AND NOT EXISTS
+                  (
+                      SELECT 1
+                      FROM dbo.isBOMImport_NewMakeItems ex
+                      WHERE ex.ItemCode = src.ComponentItemCode
+                  );";
+
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@ImportFileName", importFileName);
+            command.Parameters.AddWithValue("@WindowsUser",    Environment.UserName);
+
+            return await command.ExecuteNonQueryAsync();
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error copying new make items from bills: {ex.Message}", ex);
         }
     }
 }
