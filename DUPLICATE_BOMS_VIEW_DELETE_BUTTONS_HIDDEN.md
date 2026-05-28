@@ -1,0 +1,240 @@
+# Duplicate BOMs View - Delete Buttons Hidden
+
+## Overview
+
+Hidden both delete buttons from the Duplicate BOMs View to prevent accidental deletion of duplicate BOMs. Users can still view and search duplicates, but cannot delete them from the UI.
+
+## Changes Made
+
+### File Modified
+- **File**: `Aml.BOM.Import.UI\Views\DuplicateBomsView.xaml`
+- **Section**: Toolbar (Grid.Row="0")
+
+### Buttons Hidden
+
+#### 1. Delete Selected Button
+```xaml
+<Button Content="Delete Selected" 
+       Command="{Binding DeleteSelectedCommand}"
+       Style="{StaticResource SecondaryButtonStyle}"
+       Margin="0,0,10,0"
+       Visibility="Collapsed"/>
+```
+
+#### 2. Delete All Duplicates Button
+```xaml
+<Button Content="Delete All Duplicates" 
+       Command="{Binding DeleteAllCommand}"
+       Background="#F44336"
+       Foreground="White"
+       Padding="15,8"
+       Margin="0,0,10,0"
+       BorderThickness="0"
+       Cursor="Hand"
+       Visibility="Collapsed"/>
+```
+
+## Visual Impact
+
+### Before
+```
+????????????????????????????????????????????????????????
+? [Refresh] [Delete Selected] [Delete All Duplicates] ?
+????????????????????????????????????????????????????????
+```
+
+### After
+```
+??????????????
+? [Refresh]  ?
+??????????????
+```
+
+## Remaining Functionality
+
+Users can still:
+- ? **View** all duplicate BOMs
+- ? **Search** duplicates by various fields
+- ? **Refresh** the list to see latest data
+- ? **Select** individual duplicate records
+- ? **See statistics** (Duplicate BOMs, Unique Parents, Total Records)
+
+Users cannot:
+- ? **Delete** selected duplicate BOMs
+- ? **Delete** all duplicate BOMs at once
+
+## Backend Code Status
+
+### ViewModel Methods Still Exist
+The delete methods in `DuplicateBomsViewModel.cs` are still present but not accessible from UI:
+
+```csharp
+[RelayCommand]
+private async Task DeleteSelected() { ... }
+
+[RelayCommand]
+private async Task DeleteAll() { ... }
+```
+
+**Note**: These methods remain in the codebase and could be re-enabled in the future if needed.
+
+## Reasons for Hiding
+
+### 1. **Data Safety**
+- Prevents accidental deletion of duplicate BOMs
+- Duplicates should be investigated, not immediately deleted
+
+### 2. **Audit Trail**
+- Keeps historical record of what was imported
+- Useful for troubleshooting and analysis
+
+### 3. **Business Logic**
+- Duplicates indicate BOMs already exist in Sage
+- Deletion doesn't affect Sage system
+- Better to ignore duplicates than delete records
+
+## Alternative Actions
+
+If duplicate BOMs need to be removed, users can:
+
+### Option 1: Database Cleanup (SQL)
+```sql
+-- Manual cleanup if needed (use with caution)
+DELETE FROM isBOMImportBills 
+WHERE Status = 'Duplicate' 
+  AND ImportFileName = 'specific-file.xlsx';
+```
+
+### Option 2: Re-import After Fixing
+1. Identify why items are duplicates
+2. Remove from source Excel file
+3. Re-import corrected file
+
+### Option 3: Database Administrator
+- Contact DBA for bulk cleanup operations
+- Follow established data retention policies
+
+## Testing
+
+### Verify Hidden Buttons
+1. ? Open Duplicate BOMs View
+2. ? Confirm only "Refresh" button is visible
+3. ? "Delete Selected" button not visible
+4. ? "Delete All Duplicates" button not visible
+
+### Verify Remaining Functionality
+1. ? Refresh button works
+2. ? Search functionality works
+3. ? Grid displays duplicates
+4. ? Statistics show correct counts
+5. ? Row selection works
+
+## Re-enabling Delete Buttons
+
+If delete functionality needs to be restored in the future:
+
+### Quick Re-enable
+Simply remove `Visibility="Collapsed"` from both buttons:
+
+```xaml
+<!-- Before (hidden) -->
+<Button Content="Delete Selected" 
+       Visibility="Collapsed"/>
+
+<!-- After (visible) -->
+<Button Content="Delete Selected"/>
+```
+
+## UI Layout After Change
+
+```
+???????????????????????????????????????????????????????????????
+? [Refresh]                                                    ?
+???????????????????????????????????????????????????????????????
+?                    Duplicate Statistics                      ?
+?  ??????????????????????????????????????????????            ?
+?  ?Duplicate BOMs?Unique Parents?Total Records ?            ?
+?  ?      25      ?      25      ?     150      ?            ?
+?  ??????????????????????????????????????????????            ?
+???????????????????????????????????????????????????????????????
+? [Search Box.............................] [Search] [Clear]  ?
+???????????????????????????????????????????????????????????????
+? DataGrid with duplicate BOM records                         ?
+? (red/pink highlighting)                                     ?
+???????????????????????????????????????????????????????????????
+? Status: Found 25 duplicate BOMs (150 records)              ?
+???????????????????????????????????????????????????????????????
+```
+
+## Benefits
+
+### 1. **Safety First**
+- ? Prevents accidental data loss
+- ? No confirmation dialog needed
+- ? No risk of bulk deletion mistakes
+
+### 2. **Cleaner Interface**
+- ? Simplified toolbar
+- ? Focuses on viewing and searching
+- ? Less clutter
+
+### 3. **Audit & Compliance**
+- ? Maintains complete import history
+- ? Better for auditing purposes
+- ? Can track duplicate patterns over time
+
+### 4. **Business Alignment**
+- ? Duplicates are informational
+- ? Don't need to be deleted
+- ? Already marked as "will be ignored"
+
+## Related Features
+
+### Duplicate Detection
+- Duplicates are automatically detected during import
+- Two types of duplicates:
+  1. Parent exists in Sage BM_BillHeader
+  2. Potential parents (ComponentItemCode without parent)
+
+### Status Management
+- Duplicates have Status = "Duplicate"
+- Excluded from "Total Pending" counts
+- Don't affect integration process
+
+### Integration Impact
+- Duplicates are ignored during integration
+- No effect on Sage BOM tables
+- Safe to keep in database
+
+## Documentation
+
+### Related Docs
+- [DUPLICATE_BOMS_VIEW_IMPLEMENTATION_GUIDE.md](DUPLICATE_BOMS_VIEW_IMPLEMENTATION_GUIDE.md) - Full implementation
+- [DUPLICATE_BOMS_VIEW_PARENT_COUNT_ALIGNMENT.md](DUPLICATE_BOMS_VIEW_PARENT_COUNT_ALIGNMENT.md) - Parent count logic
+- [ENHANCED_DUPLICATE_DETECTION_POTENTIAL_PARENTS.md](ENHANCED_DUPLICATE_DETECTION_POTENTIAL_PARENTS.md) - Detection logic
+
+## Summary
+
+### What Changed
+- ? Hidden "Delete Selected" button
+- ? Hidden "Delete All Duplicates" button
+- ? Kept "Refresh" button visible
+- ? All other functionality unchanged
+
+### Impact
+- ? **No breaking changes**
+- ? **View-only mode** for duplicates
+- ? **Data safety** improved
+- ? **Backend code** remains intact
+
+### Status
+- ? **Build**: Successful
+- ? **Functionality**: Verified
+- ? **Ready**: For deployment
+
+---
+
+**Date**: 2024
+**Change Type**: UI Modification (Safety Enhancement)
+**Files Changed**: 1 (DuplicateBomsView.xaml)
+**Lines Changed**: 2 (added Visibility="Collapsed" to 2 buttons)

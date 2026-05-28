@@ -35,7 +35,7 @@ public partial class App : System.Windows.Application
 
                 // Register repositories
                 services.AddSingleton<IBomImportRepository>(sp => 
-                    new BomImportRepository(GetConnectionString()));
+                    new BomImportRepository(GetConnectionString(), sp.GetRequiredService<ILoggerService>()));
                 services.AddSingleton<INewMakeItemRepository>(sp => 
                     new NewMakeItemRepository(GetConnectionString()));
                 services.AddSingleton<INewBuyItemRepository>(sp => 

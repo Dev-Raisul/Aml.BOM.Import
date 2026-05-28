@@ -51,4 +51,9 @@ public interface IBomImportBillRepository
     /// Gets the count of distinct parent items with Validated status (ready to integrate)
     /// </summary>
     Task<int> GetValidatedParentItemCountAsync();
+    
+    /// <summary>
+    /// Gets the count of validated records (rows) where parent exists and ALL components are validated
+    /// </summary>
+    Task<int> GetReadyToIntegrateRecordCountAsync();
 }

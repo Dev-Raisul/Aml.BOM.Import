@@ -39,7 +39,7 @@ public partial class AboutWindow : Window
             DotNetVersionTextBlock.Text = ".NET 8.0";
             OSVersionTextBlock.Text = Environment.OSVersion.ToString();
             BuildDateTextBlock.Text = DateTime.Now.ToString("MMMM dd, yyyy");
-            CopyrightTextBlock.Text = $"© {DateTime.Now.Year} AML Corporation";
+            CopyrightTextBlock.Text = $"© {DateTime.Now.Year} InfoSpring";
         }
     }
 

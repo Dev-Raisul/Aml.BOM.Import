@@ -6,16 +6,16 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    
+
     <!-- Assembly Information -->
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.3.0</AssemblyVersion>
+    <FileVersion>1.0.3.0</FileVersion>
+    <Version>1.0.3</Version>
     <Product>AML BOM Import</Product>
     <Company>AML Corporation</Company>
-    <Copyright>2024 AML Corporation. All rights reserved.</Copyright>
+    <Copyright>2024 InfoSpring. All rights reserved.</Copyright>
     <Description>Bill of Materials Import and Integration Tool for Sage 100</Description>
-    <Authors>AML Development Team</Authors>
+    <Authors>InfoSpring</Authors>
   </PropertyGroup>
 
   <ItemGroup>

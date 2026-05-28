@@ -35,6 +35,10 @@ public class BomValidationService : IBomValidationService
             var a = 0;
         }
 
+        //if(bill.ParentItemCode== "EX-ACL5-XP-95.00P-1EC" || bill.ComponentItemCode== "EX-ACL5-XP-95.00P-1EC")
+        //{
+        //    var a = 0;
+        //}
         // Check if it's a duplicate BOM
         if (!string.IsNullOrWhiteSpace(bill.ParentItemCode))
         {
@@ -48,7 +52,7 @@ public class BomValidationService : IBomValidationService
             }
         }
 
-        // Validate parent item (if specified)
+        // Validate parent item (if specified) - for informational purposes only
         if (!string.IsNullOrWhiteSpace(bill.ParentItemCode))
         {
             var parentInfo = await _sageItemRepository.GetItemInfoAsync(bill.ParentItemCode);
@@ -57,11 +61,13 @@ public class BomValidationService : IBomValidationService
 
             if (!result.ParentExists)
             {
-                result.Warnings.Add($"Parent item '{bill.ParentItemCode}' not found in Sage");
+                // Parent not existing is a WARNING, not an error
+                // The component can still be validated independently
+                result.Warnings.Add($"Parent item '{bill.ParentItemCode}' not found in Sage - BOM not ready to integrate until parent is created");
             }
         }
 
-        // Validate component item (required)
+        // Validate component item (required) - this is independent of parent
         var componentInfo = await _sageItemRepository.GetItemInfoAsync(bill.ComponentItemCode);
         result.ComponentExists = componentInfo?.Exists ?? false;
         result.ComponentItemType = componentInfo?.ItemType;
@@ -347,7 +353,7 @@ public class BomValidationService : IBomValidationService
         {
             var bills = (await _billRepository.GetByFileNameAsync(fileName)).ToList();
             
-            // Group by parent item code
+            // Step 1: Mark bills with parent item codes that are duplicates
             var parentGroups = bills
                 .Where(b => !string.IsNullOrWhiteSpace(b.ParentItemCode))
                 .GroupBy(b => b.ParentItemCode);
@@ -355,7 +361,7 @@ public class BomValidationService : IBomValidationService
             foreach (var group in parentGroups)
             {
                 var parentItemCode = group.Key;
-                var isDuplicate = await IsDuplicateBomAsync(parentItemCode, group.First().BOMNumber,group.First().ImportFileName);
+                var isDuplicate = await IsDuplicateBomAsync(parentItemCode, group.First().BOMNumber, group.First().ImportFileName);
 
                 if (isDuplicate)
                 {
@@ -376,6 +382,54 @@ public class BomValidationService : IBomValidationService
 
                     _logger.LogInformation("Marked {0} bills as duplicate for parent: {1}", 
                         billIds.Count, parentItemCode);
+                }
+            }
+
+            // Step 2: Check for potential parent items (components without parent codes)
+            // that might be duplicates if their ComponentItemCode matches existing parent items
+            var potentialParents = bills
+                .Where(b => string.IsNullOrWhiteSpace(b.ParentItemCode) && 
+                           !string.IsNullOrWhiteSpace(b.ComponentItemCode))
+                .ToList();
+
+            foreach (var bill in potentialParents)
+            {
+                // Check if this component item code exists as a parent in BM_BillHeader
+                var existsAsParent = await _sageItemRepository.BillExistsInBomHeaderAsync(bill.ComponentItemCode);
+                
+                if (existsAsParent)
+                {
+                    // Mark as duplicate - this component is actually a parent that already exists
+                    await _billRepository.UpdateStatusAsync(bill.Id, "Duplicate", null, null);
+                    await _billRepository.UpdateValidationAsync(
+                        bill.Id,
+                        false,
+                        null,
+                        $"Duplicate BOM - Component item '{bill.ComponentItemCode}' already exists as parent in BM_BillHeader table");
+                    
+                    duplicateCount++;
+                    _logger.LogInformation("Marked potential parent as duplicate: ComponentItemCode={0} exists as parent in BM_BillHeader", 
+                        bill.ComponentItemCode);
+                    continue;
+                }
+
+                // Also check if this component exists as a parent in previous imports
+                var existingBillsWithThisAsParent = await _billRepository.GetByParentItemCodeAsync(bill.ComponentItemCode);
+                var hasDuplicateInPreviousImport = existingBillsWithThisAsParent.Any(b => b.ImportFileName != fileName);
+
+                if (hasDuplicateInPreviousImport)
+                {
+                    // Mark as duplicate - this component is a parent from a previous import
+                    await _billRepository.UpdateStatusAsync(bill.Id, "Duplicate", null, null);
+                    await _billRepository.UpdateValidationAsync(
+                        bill.Id,
+                        false,
+                        null,
+                        $"Duplicate BOM - Component item '{bill.ComponentItemCode}' already exists as parent in previous import");
+                    
+                    duplicateCount++;
+                    _logger.LogInformation("Marked potential parent as duplicate: ComponentItemCode={0} exists as parent in previous import", 
+                        bill.ComponentItemCode);
                 }
             }
 

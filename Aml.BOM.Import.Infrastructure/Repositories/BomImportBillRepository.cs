@@ -342,10 +342,22 @@ public class BomImportBillRepository : IBomImportBillRepository
         _logger.LogDebug("Getting pending parent item count");
 
         const string sql = @"
-            SELECT COUNT(DISTINCT ParentItemCode)
-            FROM isBOMImportBills
-            WHERE Status NOT IN ('Integrated', 'Duplicate')
-              AND ParentItemCode IS NOT NULL";
+            SELECT COUNT(DISTINCT ItemCode)
+            FROM (
+                -- Parent items (items that have a parent code)
+                SELECT DISTINCT ParentItemCode AS ItemCode
+                FROM isBOMImportBills
+                WHERE Status NOT IN ('Integrated', 'Duplicate')
+                  AND ParentItemCode IS NOT NULL
+                
+                UNION
+                
+                -- Standalone parent items (component items without a parent)
+                SELECT DISTINCT ComponentItemCode AS ItemCode
+                FROM isBOMImportBills
+                WHERE Status NOT IN ('Integrated', 'Duplicate')
+                  AND ParentItemCode IS NULL
+            ) AS AllParents";
 
         try
         {
@@ -365,13 +377,52 @@ public class BomImportBillRepository : IBomImportBillRepository
 
     public async Task<int> GetValidatedParentItemCountAsync()
     {
-        _logger.LogDebug("Getting validated parent item count");
+        _logger.LogDebug("Getting validated parent item count (fully validated BOMs only - including nested parent items)");
 
         const string sql = @"
-            SELECT COUNT(DISTINCT ParentItemCode)
-            FROM isBOMImportBills
-            WHERE Status = 'Validated'
-              AND ParentItemCode IS NOT NULL";
+            SELECT COUNT(DISTINCT ItemCode)
+            FROM (
+                -- Parent items where ALL components are Validated
+                -- AND if the parent itself is a component elsewhere, it must also be validated
+                SELECT DISTINCT ParentItemCode AS ItemCode
+                FROM isBOMImportBills
+                WHERE ParentItemCode IS NOT NULL
+                  -- Parent exists in CI_Item
+                  AND ParentItemCode IN (
+                      SELECT ItemCode FROM CI_Item
+                  )
+                  -- All components of this parent are validated
+                  AND ParentItemCode NOT IN (
+                      SELECT DISTINCT ParentItemCode
+                      FROM isBOMImportBills
+                      WHERE ParentItemCode IS NOT NULL
+                        AND Status != 'Validated'
+                  )
+                  -- If this parent is used as a component elsewhere, it must be validated
+                  AND (
+                      -- Either the parent is NOT used as a component anywhere
+                      ParentItemCode NOT IN (
+                          SELECT DISTINCT ComponentItemCode
+                          FROM isBOMImportBills
+                          WHERE ComponentItemCode IS NOT NULL
+                      )
+                      -- OR if it IS used as a component, it must be validated
+                      OR ParentItemCode IN (
+                          SELECT DISTINCT ComponentItemCode
+                          FROM isBOMImportBills
+                          WHERE ComponentItemCode IS NOT NULL
+                            AND Status = 'Validated'
+                      )
+                  )
+                
+                UNION
+                
+                -- Standalone parent items with Validated status
+                SELECT DISTINCT ComponentItemCode AS ItemCode
+                FROM isBOMImportBills
+                WHERE Status = 'Validated'
+                  AND ParentItemCode IS NULL
+            ) AS AllParents";
 
         try
         {
@@ -566,14 +617,22 @@ public class BomImportBillRepository : IBomImportBillRepository
         _logger.LogDebug("Getting parent item count for status: {0}", status);
 
         const string sql = @"
-            SELECT COUNT(DISTINCT ComponentItemCode)
-            FROM isBOMImportBills
-            WHERE Status = @Status
-              AND ComponentItemCode IN (
-                  SELECT DISTINCT ParentItemCode
-                  FROM isBOMImportBills
-                  WHERE ParentItemCode IS NOT NULL
-              )";
+            SELECT COUNT(DISTINCT ItemCode)
+            FROM (
+                -- Parent items (items that have a parent code)
+                SELECT DISTINCT ParentItemCode AS ItemCode
+                FROM isBOMImportBills
+                WHERE Status = @Status
+                  AND ParentItemCode IS NOT NULL
+                
+                UNION
+                
+                -- Standalone parent items (component items without a parent)
+                SELECT DISTINCT ComponentItemCode AS ItemCode
+                FROM isBOMImportBills
+                WHERE Status = @Status
+                  AND ParentItemCode IS NULL
+            ) AS AllParents";
 
         try
         {
@@ -588,6 +647,59 @@ public class BomImportBillRepository : IBomImportBillRepository
         catch (Exception ex)
         {
             _logger.LogError("Failed to get parent item count by status: {0}", ex, status);
+            throw;
+        }
+    }
+
+    public async Task<int> GetReadyToIntegrateRecordCountAsync()
+    {
+        _logger.LogDebug("Getting ready to integrate record count (only records where parent and all components are fully validated)");
+
+        const string sql = @"
+            SELECT COUNT(*)
+            FROM isBOMImportBills ib
+            WHERE ib.Status = 'Validated'
+              AND ib.ParentItemCode IS NOT NULL
+              -- Parent exists in CI_Item
+              AND ib.ParentItemCode IN (
+                  SELECT ItemCode FROM CI_Item
+              )
+              -- All components of this parent are validated
+              AND ib.ParentItemCode NOT IN (
+                  SELECT DISTINCT ParentItemCode
+                  FROM isBOMImportBills
+                  WHERE ParentItemCode IS NOT NULL
+                    AND Status != 'Validated'
+              )
+              -- If this parent is used as a component elsewhere, it must be validated
+              AND (
+                  -- Either the parent is NOT used as a component anywhere
+                  ib.ParentItemCode NOT IN (
+                      SELECT DISTINCT ComponentItemCode
+                      FROM isBOMImportBills
+                      WHERE ComponentItemCode IS NOT NULL
+                  )
+                  -- OR if it IS used as a component, it must be validated
+                  OR ib.ParentItemCode IN (
+                      SELECT DISTINCT ComponentItemCode
+                      FROM isBOMImportBills
+                      WHERE ComponentItemCode IS NOT NULL
+                        AND Status = 'Validated'
+                  )
+              )";
+
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using var command = new SqlCommand(sql, connection);
+
+            return (int)(await command.ExecuteScalarAsync() ?? 0);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to get ready to integrate record count", ex);
             throw;
         }
     }

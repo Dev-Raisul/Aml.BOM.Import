@@ -1,21 +1,97 @@
 using Aml.BOM.Import.Shared.Interfaces;
+using Microsoft.Data.SqlClient;
 
 namespace Aml.BOM.Import.Infrastructure.Repositories;
 
 public class BomImportRepository : IBomImportRepository
 {
     private readonly string _connectionString;
+    private readonly ILoggerService _logger;
 
-    public BomImportRepository(string connectionString)
+    public BomImportRepository(string connectionString, ILoggerService logger)
     {
         _connectionString = connectionString;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<object>> GetAllAsync()
     {
-        // TODO: Implement SQL query to retrieve all BOM import records
-        await Task.CompletedTask;
-        return new List<object>();
+        _logger.LogDebug("Retrieving all BOMs ready to integrate (parent exists, all components validated, and nested parents validated)");
+
+        const string sql = @"
+            SELECT DISTINCT
+                ib.ParentItemCode AS ItemCode,
+                COALESCE(ci.ItemCodeDesc, ib.ParentDescription) AS Description,
+                MIN(ib.ImportFileName) AS ImportFileName,
+                MIN(ib.ImportDate) AS ImportDate,
+                MIN(ib.ImportWindowsUser) AS ImportedBy,
+                'Validated' AS Status,
+                COUNT(*) AS ComponentCount
+            FROM isBOMImportBills ib
+            LEFT JOIN CI_Item ci ON ib.ParentItemCode = ci.ItemCode
+            WHERE ib.ParentItemCode IS NOT NULL
+              -- Parent MUST exist in CI_Item (JOIN must find a match)
+              AND ci.ItemCode IS NOT NULL
+              -- All components must be validated
+              AND ib.ParentItemCode NOT IN (
+                  SELECT DISTINCT ParentItemCode
+                  FROM isBOMImportBills
+                  WHERE ParentItemCode IS NOT NULL
+                    AND Status != 'Validated'
+              )
+              -- If this parent is used as a component elsewhere, it must be validated
+              AND (
+                  -- Either the parent is NOT used as a component anywhere
+                  ib.ParentItemCode NOT IN (
+                      SELECT DISTINCT ComponentItemCode
+                      FROM isBOMImportBills
+                      WHERE ComponentItemCode IS NOT NULL
+                  )
+                  -- OR if it IS used as a component, it must be validated
+                  OR ib.ParentItemCode IN (
+                      SELECT DISTINCT ComponentItemCode
+                      FROM isBOMImportBills
+                      WHERE ComponentItemCode IS NOT NULL
+                        AND Status = 'Validated'
+                  )
+              )
+            GROUP BY ib.ParentItemCode, COALESCE(ci.ItemCodeDesc, ib.ParentDescription)
+            ORDER BY ib.ParentItemCode";
+
+        var boms = new List<object>();
+
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using var command = new SqlCommand(sql, connection);
+            using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                boms.Add(new
+                {
+                    ItemCode = reader.GetString(reader.GetOrdinal("ItemCode")),
+                    Description = reader.IsDBNull(reader.GetOrdinal("Description")) 
+                        ? string.Empty 
+                        : reader.GetString(reader.GetOrdinal("Description")),
+                    ImportFileName = reader.GetString(reader.GetOrdinal("ImportFileName")),
+                    ImportDate = reader.GetDateTime(reader.GetOrdinal("ImportDate")),
+                    ImportedBy = reader.GetString(reader.GetOrdinal("ImportedBy")),
+                    Status = reader.GetString(reader.GetOrdinal("Status")),
+                    ComponentCount = reader.GetInt32(reader.GetOrdinal("ComponentCount"))
+                });
+            }
+
+            _logger.LogInformation("Retrieved {0} fully validated BOMs ready to integrate (including nested parent validation)", boms.Count);
+            return boms;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to retrieve BOMs ready to integrate", ex);
+            throw;
+        }
     }
 
     public async Task<object?> GetByIdAsync(int id)

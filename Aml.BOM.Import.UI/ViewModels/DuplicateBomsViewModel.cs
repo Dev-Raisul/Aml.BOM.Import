@@ -62,12 +62,11 @@ public partial class DuplicateBomsViewModel : ObservableObject
             // Apply filter if search text exists
             ApplyFilter();
 
-            // Calculate statistics
+            // Calculate statistics using the same logic as dashboard
             TotalDuplicateRecords = _allDuplicateBoms.Count;
-            TotalDuplicateBoms = _allDuplicateBoms
-                .Select(b => b.ParentItemCode)
-                .Distinct()
-                .Count();
+            
+            // Use repository method for consistent parent count (same as dashboard)
+            TotalDuplicateBoms = await _bomBillRepository.GetParentItemCountByStatusAsync("Duplicate");
             UniqueParentItems = TotalDuplicateBoms;
 
             StatusMessage = $"Found {TotalDuplicateBoms} duplicate BOMs ({TotalDuplicateRecords} records)";

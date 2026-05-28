@@ -33,6 +33,9 @@ public partial class NewBomsViewModel : ObservableObject
     private int _validatedBomsCount;
 
     [ObservableProperty]
+    private int _totalValidatedRecords;
+
+    [ObservableProperty]
     private int _newMakeItemsCount;
 
     [ObservableProperty]
@@ -61,6 +64,9 @@ public partial class NewBomsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _statusMessage = "Ready";
+
+    // Computed property for not validated count (uses total validated records, not ready to integrate count)
+    public int NotValidatedCount => TotalPendingBoms - TotalValidatedRecords;
 
     public NewBomsViewModel(
         BomImportService bomImportService, 
@@ -122,8 +128,12 @@ public partial class NewBomsViewModel : ObservableObject
             // Get status summary from repository
             var statusSummary = await _bomBillRepository.GetStatusSummaryAsync();
 
-            // Update counts based on status
-            ValidatedBomsCount = statusSummary.ContainsKey("Validated") ? statusSummary["Validated"] : 0;
+            // Get validated count using special logic (only fully ready records for "Ready to Integrate")
+            ValidatedBomsCount = await _bomBillRepository.GetReadyToIntegrateRecordCountAsync();
+            
+            // Get total validated records (all records with Status='Validated' for the validation label)
+            TotalValidatedRecords = statusSummary.ContainsKey("Validated") ? statusSummary["Validated"] : 0;
+            
             NewMakeItemsCount = statusSummary.ContainsKey("NewMakeItem") ? statusSummary["NewMakeItem"] : 0;
             NewBuyItemsCount = statusSummary.ContainsKey("NewBuyItem") ? statusSummary["NewBuyItem"] : 0;
             DuplicateBomsCount = statusSummary.ContainsKey("Duplicate") ? statusSummary["Duplicate"] : 0;
@@ -142,6 +152,9 @@ public partial class NewBomsViewModel : ObservableObject
             // Get parent counts for pending and validated
             TotalPendingBomsParentCount = await _bomBillRepository.GetPendingParentItemCountAsync();
             ValidatedBomsParentCount = await _bomBillRepository.GetValidatedParentItemCountAsync();
+
+            // Notify computed property changes
+            OnPropertyChanged(nameof(NotValidatedCount));
         }
         catch (Exception ex)
         {

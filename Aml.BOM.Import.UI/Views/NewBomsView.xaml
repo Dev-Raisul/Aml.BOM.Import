@@ -197,21 +197,138 @@
             </Grid>
         </Border>
 
+        <!-- Validation Summary Label -->
+        <TextBlock Grid.Row="1" 
+                  HorizontalAlignment="Center" 
+                  VerticalAlignment="Bottom" 
+                  Margin="0,0,0,10"
+                  FontSize="13"
+                  Foreground="{StaticResource SecondaryTextBrush}">
+            <Run Text="Validation Status: " FontWeight="SemiBold"/>
+            <Run Text="{Binding TotalValidatedRecords, Mode=OneWay}" 
+                 FontWeight="Bold" 
+                 Foreground="#4CAF50"/>
+            <Run Text=" Validated" Foreground="#4CAF50"/>
+            <Run Text=" / "/>
+            <Run Text="{Binding NotValidatedCount, Mode=OneWay}" 
+                 FontWeight="Bold" 
+                 Foreground="#FF5722"/>
+            <Run Text=" Not Validated" Foreground="#FF5722"/>
+        </TextBlock>
+
         <!-- BOMs Grid -->
         <DataGrid Grid.Row="2" 
                  ItemsSource="{Binding Boms}"
                  SelectedItem="{Binding SelectedBom}"
                  AutoGenerateColumns="False"
                  IsReadOnly="True"
-                 SelectionMode="Single">
+                 SelectionMode="Single"
+                 GridLinesVisibility="Horizontal"
+                 HeadersVisibility="Column"
+                 AlternatingRowBackground="#F9F9F9"
+                 RowHeight="35"
+                 FontSize="12">
+            
+            <DataGrid.ColumnHeaderStyle>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="#2196F3"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="Padding" Value="10,8"/>
+                    <Setter Property="BorderBrush" Value="#1976D2"/>
+                    <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                </Style>
+            </DataGrid.ColumnHeaderStyle>
+
+            <DataGrid.CellStyle>
+                <Style TargetType="DataGridCell">
+                    <Setter Property="Padding" Value="10,5"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#E3F2FD"/>
+                            <Setter Property="Foreground" Value="Black"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.CellStyle>
+            
             <DataGrid.Columns>
-                <DataGridTextColumn Header="BOM Number" Binding="{Binding BomNumber}" Width="150"/>
-                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
-                <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="200"/>
-                <DataGridTextColumn Header="Import Date" Binding="{Binding ImportDate, StringFormat='yyyy-MM-dd HH:mm'}" Width="140"/>
-                <DataGridTextColumn Header="Imported By" Binding="{Binding ImportedBy}" Width="120"/>
-                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                <DataGridTextColumn Header="Parent Item Code" 
+                                   Binding="{Binding ItemCode}" 
+                                   Width="150"
+                                   FontWeight="SemiBold"/>
+                <DataGridTextColumn Header="Description" 
+                                   Binding="{Binding Description}" 
+                                   Width="*"
+                                   MinWidth="200"/>
+                <DataGridTextColumn Header="Components" 
+                                   Binding="{Binding ComponentCount}" 
+                                   Width="100">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Foreground" Value="#2196F3"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="File Name" 
+                                   Binding="{Binding ImportFileName}" 
+                                   Width="200"/>
+                <DataGridTextColumn Header="Import Date" 
+                                   Binding="{Binding ImportDate, StringFormat='yyyy-MM-dd HH:mm'}" 
+                                   Width="140"/>
+                <DataGridTextColumn Header="Imported By" 
+                                   Binding="{Binding ImportedBy}" 
+                                   Width="120"/>
+                <DataGridTextColumn Header="Status" 
+                                   Binding="{Binding Status}" 
+                                   Width="100">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Foreground" Value="#4CAF50"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
             </DataGrid.Columns>
+            
+            <!-- Empty State -->
+            <DataGrid.Style>
+                <Style TargetType="DataGrid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Boms.Count}" Value="0">
+                            <Setter Property="Background">
+                                <Setter.Value>
+                                    <VisualBrush Stretch="None">
+                                        <VisualBrush.Visual>
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="??" 
+                                                          FontSize="48" 
+                                                          HorizontalAlignment="Center" 
+                                                          Margin="0,0,0,10"
+                                                          Opacity="0.3"/>
+                                                <TextBlock Text="No BOMs ready to integrate" 
+                                                          FontSize="16" 
+                                                          Foreground="Gray" 
+                                                          HorizontalAlignment="Center"/>
+                                                <TextBlock Text="Import a BOM file or resolve validation issues" 
+                                                          FontSize="12" 
+                                                          Foreground="LightGray" 
+                                                          HorizontalAlignment="Center" 
+                                                          Margin="0,5,0,0"/>
+                                            </StackPanel>
+                                        </VisualBrush.Visual>
+                                    </VisualBrush>
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.Style>
         </DataGrid>
 
         <!-- Status Bar -->
