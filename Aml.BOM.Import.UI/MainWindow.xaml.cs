@@ -10,6 +10,7 @@ public partial class MainWindow : System.Windows.Window
     {
         InitializeComponent();
         DataContext = viewModel;
+        viewModel.NavigateCommand.Execute("NewBoms");
     }
 
     private void AboutButton_Click(object sender, RoutedEventArgs e)

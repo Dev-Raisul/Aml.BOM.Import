@@ -15,6 +15,7 @@ public partial class NewBomsViewModel : ObservableObject
     private readonly IBomValidationService _validationService;
     private readonly IBomIntegrationService _bomIntegrationService;
     private readonly ILoggerService _logger;
+    private readonly MainWindowViewModel _mainWindowViewModel;
 
     [ObservableProperty]
     private ObservableCollection<object> _boms = new();
@@ -51,15 +52,26 @@ public partial class NewBomsViewModel : ObservableObject
         IBomImportBillRepository bomBillRepository,
         IBomValidationService validationService,
         IBomIntegrationService bomIntegrationService,
-        ILoggerService logger)
+        ILoggerService logger,
+        MainWindowViewModel mainWindowViewModel)
     {
         _bomImportService = bomImportService;
         _bomBillRepository = bomBillRepository;
         _validationService = validationService;
         _bomIntegrationService = bomIntegrationService;
         _logger = logger;
+        _mainWindowViewModel = mainWindowViewModel;
         LoadBomsCommand.Execute(null);
     }
+
+    [RelayCommand]
+    private void NavigateToNewMakeItems() => _mainWindowViewModel.NavigateCommand.Execute("NewMakeItems");
+
+    [RelayCommand]
+    private void NavigateToNewBuyItems() => _mainWindowViewModel.NavigateCommand.Execute("NewBuyItems");
+
+    [RelayCommand]
+    private void NavigateToDuplicateBoms() => _mainWindowViewModel.NavigateCommand.Execute("DuplicateBoms");
 
     [RelayCommand]
     private async Task LoadBoms()

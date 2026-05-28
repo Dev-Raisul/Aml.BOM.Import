@@ -82,7 +82,12 @@
                 </StackPanel>
 
                 <!-- New Make Items Required -->
-                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                <StackPanel Grid.Column="2" HorizontalAlignment="Center" 
+                            Cursor="Hand"
+                            Background="Transparent">
+                    <StackPanel.InputBindings>
+                        <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToNewMakeItemsCommand}"/>
+                    </StackPanel.InputBindings>
                     <TextBlock Text="New Make Items" 
                               FontSize="12" 
                               FontWeight="SemiBold" 
@@ -99,7 +104,12 @@
                 </StackPanel>
 
                 <!-- New Buy Items Required -->
-                <StackPanel Grid.Column="3" HorizontalAlignment="Center">
+                <StackPanel Grid.Column="3" HorizontalAlignment="Center" 
+                            Cursor="Hand"
+                            Background="Transparent">
+                    <StackPanel.InputBindings>
+                        <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToNewBuyItemsCommand}"/>
+                    </StackPanel.InputBindings>
                     <TextBlock Text="New Buy Items" 
                               FontSize="12" 
                               FontWeight="SemiBold" 
@@ -116,7 +126,12 @@
                 </StackPanel>
 
                 <!-- Duplicates -->
-                <StackPanel Grid.Column="4" HorizontalAlignment="Center">
+                <StackPanel Grid.Column="4" HorizontalAlignment="Center" 
+                            Cursor="Hand"
+                            Background="Transparent">
+                    <StackPanel.InputBindings>
+                        <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToDuplicateBomsCommand}"/>
+                    </StackPanel.InputBindings>
                     <TextBlock Text="Duplicates" 
                               FontSize="12" 
                               FontWeight="SemiBold" 
