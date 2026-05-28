@@ -47,7 +47,7 @@ public class NewMakeItemRepository : INewMakeItemRepository
     // GetAllAsync – reads from isBOMImport_NewMakeItems
     // -------------------------------------------------------------------------
 
-    public async Task<IEnumerable<object>> GetAllAsync()
+    public async Task<IEnumerable<NewMakeItem>> GetAllAsync()
     {
         var items = new List<NewMakeItem>();
 
@@ -84,7 +84,7 @@ public class NewMakeItemRepository : INewMakeItemRepository
     // GetByIdAsync – reads from isBOMImport_NewMakeItems
     // -------------------------------------------------------------------------
 
-    public async Task<object?> GetByIdAsync(int id)
+    public async Task<NewMakeItem?> GetByIdAsync(int id)
     {
         try
         {
@@ -121,10 +121,9 @@ public class NewMakeItemRepository : INewMakeItemRepository
     // AddAsync – insert a single item into isBOMImport_NewMakeItems
     // -------------------------------------------------------------------------
 
-    public async Task<int> AddAsync(object newMakeItem)
+    public async Task<int> AddAsync(NewMakeItem newMakeItem)
     {
-        if (newMakeItem is not NewMakeItem item)
-            throw new ArgumentException("Invalid item type", nameof(newMakeItem));
+        var item = newMakeItem;
 
         try
         {
@@ -177,10 +176,9 @@ public class NewMakeItemRepository : INewMakeItemRepository
     //              whenever the user edits an item in the Make Items view.
     // -------------------------------------------------------------------------
 
-    public async Task UpdateAsync(object newMakeItem)
+    public async Task UpdateAsync(NewMakeItem newMakeItem)
     {
-        if (newMakeItem is not NewMakeItem item)
-            throw new ArgumentException("Invalid item type", nameof(newMakeItem));
+        var item = newMakeItem;
 
         try
         {
@@ -253,7 +251,7 @@ public class NewMakeItemRepository : INewMakeItemRepository
     //                    (the dedicated table has no separate status column)
     // -------------------------------------------------------------------------
 
-    public async Task<IEnumerable<object>> GetByStatusAsync(int status)
+    public async Task<IEnumerable<NewMakeItem>> GetByStatusAsync(int status)
     {
         return await GetAllAsync();
     }

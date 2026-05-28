@@ -1,4 +1,5 @@
 using Aml.BOM.Import.Application.Services;
+using Aml.BOM.Import.Domain.Entities;
 using Aml.BOM.Import.Shared.Interfaces;
 using Moq;
 
@@ -28,7 +29,11 @@ public class NewItemServiceTests
     public async Task GetNewMakeItemsAsync_ShouldReturnMakeItems()
     {
         // Arrange
-        var expectedItems = new List<object> { new object(), new object() };
+        var expectedItems = new List<NewMakeItem> 
+        { 
+            new NewMakeItem { ItemCode = "ITEM-001" }, 
+            new NewMakeItem { ItemCode = "ITEM-002" } 
+        };
         _mockNewMakeItemRepository
             .Setup(x => x.GetAllAsync())
             .ReturnsAsync(expectedItems);
@@ -46,7 +51,10 @@ public class NewItemServiceTests
     public async Task GetNewBuyItemsAsync_ShouldReturnBuyItems()
     {
         // Arrange
-        var expectedItems = new List<object> { new object() };
+        var expectedItems = new List<NewBuyItem> 
+        { 
+            new NewBuyItem { ItemCode = "BUY-001" } 
+        };
         _mockNewBuyItemRepository
             .Setup(x => x.GetAllAsync())
             .ReturnsAsync(expectedItems);

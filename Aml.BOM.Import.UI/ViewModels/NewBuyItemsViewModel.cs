@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Markup;
 using Aml.BOM.Import.Application.Services;
+using Aml.BOM.Import.Domain.Entities;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -14,10 +15,10 @@ public partial class NewBuyItemsViewModel : ObservableObject
     private readonly NewItemService _newItemService;
 
     [ObservableProperty]
-    private ObservableCollection<object> _items = new();
+    private ObservableCollection<NewBuyItem> _items = new();
 
     [ObservableProperty]
-    private object? _selectedItem;
+    private NewBuyItem? _selectedItem;
 
     [ObservableProperty]
     private bool _isLoading;
@@ -44,7 +45,7 @@ public partial class NewBuyItemsViewModel : ObservableObject
         {
             var items = await _newItemService.GetNewBuyItemsAsync();
             
-            Items = new ObservableCollection<object>(items);
+            Items = new ObservableCollection<NewBuyItem>(items);
             TotalItems = Items.Count;
             StatusMessage = $"Loaded {TotalItems} new buy item(s)";
         }
@@ -162,14 +163,13 @@ public partial class NewBuyItemsViewModel : ObservableObject
         var dataGroup = new TableRowGroup();
         foreach (var item in Items)
         {
-            dynamic dyn = item;
             var row = new TableRow();
             
-            row.Cells.Add(new TableCell(new Paragraph(new Run(dyn.ItemCode?.ToString() ?? ""))) { BorderBrush = System.Windows.Media.Brushes.Black, BorderThickness = new Thickness(1), Padding = new Thickness(5) });
-            row.Cells.Add(new TableCell(new Paragraph(new Run(dyn.Description?.ToString() ?? ""))) { BorderBrush = System.Windows.Media.Brushes.Black, BorderThickness = new Thickness(1), Padding = new Thickness(5) });
-            row.Cells.Add(new TableCell(new Paragraph(new Run(dyn.UnitOfMeasure?.ToString() ?? ""))) { BorderBrush = System.Windows.Media.Brushes.Black, BorderThickness = new Thickness(1), Padding = new Thickness(5) });
-            row.Cells.Add(new TableCell(new Paragraph(new Run(((DateTime)dyn.IdentifiedDate).ToString("yyyy-MM-dd")))) { BorderBrush = System.Windows.Media.Brushes.Black, BorderThickness = new Thickness(1), Padding = new Thickness(5) });
-            row.Cells.Add(new TableCell(new Paragraph(new Run(dyn.OccurrenceCount?.ToString() ?? ""))) { BorderBrush = System.Windows.Media.Brushes.Black, BorderThickness = new Thickness(1), Padding = new Thickness(5) });
+            row.Cells.Add(new TableCell(new Paragraph(new Run(item.ItemCode))) { BorderBrush = System.Windows.Media.Brushes.Black, BorderThickness = new Thickness(1), Padding = new Thickness(5) });
+            row.Cells.Add(new TableCell(new Paragraph(new Run(item.Description))) { BorderBrush = System.Windows.Media.Brushes.Black, BorderThickness = new Thickness(1), Padding = new Thickness(5) });
+            row.Cells.Add(new TableCell(new Paragraph(new Run(item.UnitOfMeasure))) { BorderBrush = System.Windows.Media.Brushes.Black, BorderThickness = new Thickness(1), Padding = new Thickness(5) });
+            row.Cells.Add(new TableCell(new Paragraph(new Run(item.IdentifiedDate.ToString("yyyy-MM-dd")))) { BorderBrush = System.Windows.Media.Brushes.Black, BorderThickness = new Thickness(1), Padding = new Thickness(5) });
+            row.Cells.Add(new TableCell(new Paragraph(new Run(item.OccurrenceCount.ToString()))) { BorderBrush = System.Windows.Media.Brushes.Black, BorderThickness = new Thickness(1), Padding = new Thickness(5) });
 
             dataGroup.Rows.Add(row);
         }

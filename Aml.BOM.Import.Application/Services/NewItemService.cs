@@ -1,3 +1,4 @@
+using Aml.BOM.Import.Domain.Entities;
 using Aml.BOM.Import.Shared.Interfaces;
 
 namespace Aml.BOM.Import.Application.Services;
@@ -18,12 +19,12 @@ public class NewItemService
         _sageItemRepository = sageItemRepository;
     }
 
-    public async Task<IEnumerable<object>> GetNewMakeItemsAsync()
+    public async Task<IEnumerable<NewMakeItem>> GetNewMakeItemsAsync()
     {
         return await _newMakeItemRepository.GetAllAsync();
     }
 
-    public async Task<IEnumerable<object>> GetNewBuyItemsAsync()
+    public async Task<IEnumerable<NewBuyItem>> GetNewBuyItemsAsync()
     {
         return await _newBuyItemRepository.GetAllAsync();
     }

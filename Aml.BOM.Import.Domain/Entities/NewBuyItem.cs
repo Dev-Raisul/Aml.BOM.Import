@@ -14,6 +14,7 @@ public class NewBuyItem
     public string IdentifiedBy { get; set; } = string.Empty;
     public DateTime? IntegratedDate { get; set; }
     public string? IntegratedBy { get; set; }
+    public int OccurrenceCount { get; set; }
     public DateTime CreatedDate { get; set; }
     public DateTime ModifiedDate { get; set; }
 }

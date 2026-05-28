@@ -1,4 +1,5 @@
 using Aml.BOM.Import.Domain.Entities;
+using Aml.BOM.Import.Domain.Enums;
 using Aml.BOM.Import.Shared.Interfaces;
 using Microsoft.Data.SqlClient;
 
@@ -15,7 +16,7 @@ public class NewBuyItemRepository : INewBuyItemRepository
         _logger = logger;
     }
 
-    public async Task<IEnumerable<object>> GetAllAsync()
+    public async Task<IEnumerable<NewBuyItem>> GetAllAsync()
     {
         _logger.LogDebug("Retrieving all new buy items");
 
@@ -32,7 +33,7 @@ public class NewBuyItemRepository : INewBuyItemRepository
             GROUP BY ComponentItemCode, ComponentDescription, UnitOfMeasure
             ORDER BY ComponentItemCode";
 
-        var items = new List<object>();
+        var items = new List<NewBuyItem>();
 
         try
         {
@@ -44,14 +45,17 @@ public class NewBuyItemRepository : INewBuyItemRepository
 
             while (await reader.ReadAsync())
             {
-                items.Add(new
+                items.Add(new NewBuyItem
                 {
                     ItemCode = reader.GetString(reader.GetOrdinal("ItemCode")),
                     Description = reader.IsDBNull(reader.GetOrdinal("Description")) ? string.Empty : reader.GetString(reader.GetOrdinal("Description")),
                     UnitOfMeasure = reader.IsDBNull(reader.GetOrdinal("UnitOfMeasure")) ? string.Empty : reader.GetString(reader.GetOrdinal("UnitOfMeasure")),
                     IdentifiedDate = reader.GetDateTime(reader.GetOrdinal("IdentifiedDate")),
                     IdentifiedBy = reader.GetString(reader.GetOrdinal("IdentifiedBy")),
-                    OccurrenceCount = reader.GetInt32(reader.GetOrdinal("OccurrenceCount"))
+                    OccurrenceCount = reader.GetInt32(reader.GetOrdinal("OccurrenceCount")),
+                    Status = ItemIntegrationStatus.Pending,
+                    CreatedDate = DateTime.Now,
+                    ModifiedDate = DateTime.Now
                 });
             }
 
@@ -65,21 +69,21 @@ public class NewBuyItemRepository : INewBuyItemRepository
         }
     }
 
-    public async Task<object?> GetByIdAsync(int id)
+    public async Task<NewBuyItem?> GetByIdAsync(int id)
     {
         // Not applicable for this implementation as we query directly from isBOMImportBills
         await Task.CompletedTask;
         return null;
     }
 
-    public async Task<int> AddAsync(object newBuyItem)
+    public async Task<int> AddAsync(NewBuyItem newBuyItem)
     {
         // Not applicable - items are added through BOM import process
         await Task.CompletedTask;
         return 0;
     }
 
-    public async Task UpdateAsync(object newBuyItem)
+    public async Task UpdateAsync(NewBuyItem newBuyItem)
     {
         // Not applicable - items are updated through validation process
         await Task.CompletedTask;
@@ -91,7 +95,7 @@ public class NewBuyItemRepository : INewBuyItemRepository
         await Task.CompletedTask;
     }
 
-    public async Task<IEnumerable<object>> GetByStatusAsync(int status)
+    public async Task<IEnumerable<NewBuyItem>> GetByStatusAsync(int status)
     {
         // Returns all new buy items (status is implicit in the query)
         return await GetAllAsync();
