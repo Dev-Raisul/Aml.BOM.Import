@@ -318,6 +318,9 @@ public class BomIntegrationService : IBomIntegrationService
             billBus = session.CreateBusinessObject("BM_Bill_bus");
 
             // STEP 1a: Set key value - BillNo (Parent Item Code)
+
+            //bomHeader.ParentItemCode = "TEXASITEM"; //Dummy Item code for testing - replace with actual code from bomHeader.ParentItemCode when ready
+
             int retVal = billBus.nSetKeyValue("BillNo$", bomHeader.ParentItemCode);
             if (retVal == 0)
             {
@@ -403,6 +406,7 @@ public class BomIntegrationService : IBomIntegrationService
 
             // STEP 5: Add each BOM line
             int lineCount = 0;
+
             foreach (var line in bomLines)
             {
                 try
@@ -449,7 +453,7 @@ public class BomIntegrationService : IBomIntegrationService
                     }
 
                     // Set quantity per bill
-                    retVal = oLines.nSetValue("QuantityPerBill$", line.Quantity.ToString());
+                    retVal = oLines.nSetValue("QuantityPerBill", line.Quantity);
                     if (retVal == 0)
                     {
                         _logger.LogWarning("Failed to set QuantityPerBill$ for {0}: {1}", 

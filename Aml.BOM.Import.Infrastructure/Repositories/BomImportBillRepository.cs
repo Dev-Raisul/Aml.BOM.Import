@@ -509,6 +509,37 @@ public class BomImportBillRepository : IBomImportBillRepository
         }
     }
 
+    public async Task<int> GetParentItemCountByStatusAsync(string status)
+    {
+        _logger.LogDebug("Getting parent item count for status: {0}", status);
+
+        const string sql = @"
+            SELECT COUNT(DISTINCT ComponentItemCode)
+            FROM isBOMImportBills
+            WHERE Status = @Status
+              AND ComponentItemCode IN (
+                  SELECT DISTINCT ParentItemCode
+                  FROM isBOMImportBills
+                  WHERE ParentItemCode IS NOT NULL
+              )";
+
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using var command = new SqlCommand(sql, connection);
+            command.Parameters.AddWithValue("@Status", status);
+
+            return (int)(await command.ExecuteScalarAsync() ?? 0);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to get parent item count by status: {0}", ex, status);
+            throw;
+        }
+    }
+
     // Helper methods
     private void AddBillParameters(SqlCommand command, BomImportBill bill)
     {

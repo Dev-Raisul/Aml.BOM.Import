@@ -101,6 +101,16 @@
                               Foreground="#FF9800" 
                               HorizontalAlignment="Center" 
                               Margin="0,5,0,0"/>
+                    <TextBlock HorizontalAlignment="Center" 
+                              Margin="0,5,0,0">
+                        <Run Text="{Binding NewMakeItemsParentCount, Mode=OneWay}" 
+                             FontSize="11" 
+                             FontWeight="SemiBold" 
+                             Foreground="#FF9800"/>
+                        <Run Text=" parents" 
+                             FontSize="11" 
+                             Foreground="{StaticResource SecondaryTextBrush}"/>
+                    </TextBlock>
                 </StackPanel>
 
                 <!-- New Buy Items Required -->
@@ -123,6 +133,16 @@
                               Foreground="#2196F3" 
                               HorizontalAlignment="Center" 
                               Margin="0,5,0,0"/>
+                    <TextBlock HorizontalAlignment="Center" 
+                              Margin="0,5,0,0">
+                        <Run Text="{Binding NewBuyItemsParentCount, Mode=OneWay}" 
+                             FontSize="11" 
+                             FontWeight="SemiBold" 
+                             Foreground="#2196F3"/>
+                        <Run Text=" parents" 
+                             FontSize="11" 
+                             Foreground="{StaticResource SecondaryTextBrush}"/>
+                    </TextBlock>
                 </StackPanel>
 
                 <!-- Duplicates -->
@@ -143,6 +163,16 @@
                               Foreground="#9E9E9E" 
                               HorizontalAlignment="Center" 
                               Margin="0,5,0,0"/>
+                    <TextBlock HorizontalAlignment="Center" 
+                              Margin="0,5,0,0">
+                        <Run Text="{Binding DuplicateBomsParentCount, Mode=OneWay}" 
+                             FontSize="11" 
+                             FontWeight="SemiBold" 
+                             Foreground="#9E9E9E"/>
+                        <Run Text=" parents" 
+                             FontSize="11" 
+                             Foreground="{StaticResource SecondaryTextBrush}"/>
+                    </TextBlock>
                 </StackPanel>
             </Grid>
         </Border>

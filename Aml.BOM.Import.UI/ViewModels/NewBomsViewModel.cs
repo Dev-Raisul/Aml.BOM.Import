@@ -45,6 +45,15 @@ public partial class NewBomsViewModel : ObservableObject
     private int _failedBomsCount;
 
     [ObservableProperty]
+    private int _newMakeItemsParentCount;
+
+    [ObservableProperty]
+    private int _newBuyItemsParentCount;
+
+    [ObservableProperty]
+    private int _duplicateBomsParentCount;
+
+    [ObservableProperty]
     private string _statusMessage = "Ready";
 
     public NewBomsViewModel(
@@ -118,6 +127,11 @@ public partial class NewBomsViewModel : ObservableObject
             TotalPendingBoms = statusSummary
                 .Where(kvp => kvp.Key != "Integrated" && kvp.Key != "Duplicate")
                 .Sum(kvp => kvp.Value);
+
+            // Get parent item counts for each status
+            NewMakeItemsParentCount = await _bomBillRepository.GetParentItemCountByStatusAsync("NewMakeItem");
+            NewBuyItemsParentCount = await _bomBillRepository.GetParentItemCountByStatusAsync("NewBuyItem");
+            DuplicateBomsParentCount = await _bomBillRepository.GetParentItemCountByStatusAsync("Duplicate");
         }
         catch (Exception ex)
         {
