@@ -54,6 +54,12 @@ public partial class NewBomsViewModel : ObservableObject
     private int _duplicateBomsParentCount;
 
     [ObservableProperty]
+    private int _totalPendingBomsParentCount;
+
+    [ObservableProperty]
+    private int _validatedBomsParentCount;
+
+    [ObservableProperty]
     private string _statusMessage = "Ready";
 
     public NewBomsViewModel(
@@ -132,6 +138,10 @@ public partial class NewBomsViewModel : ObservableObject
             NewMakeItemsParentCount = await _bomBillRepository.GetParentItemCountByStatusAsync("NewMakeItem");
             NewBuyItemsParentCount = await _bomBillRepository.GetParentItemCountByStatusAsync("NewBuyItem");
             DuplicateBomsParentCount = await _bomBillRepository.GetParentItemCountByStatusAsync("Duplicate");
+
+            // Get parent counts for pending and validated
+            TotalPendingBomsParentCount = await _bomBillRepository.GetPendingParentItemCountAsync();
+            ValidatedBomsParentCount = await _bomBillRepository.GetValidatedParentItemCountAsync();
         }
         catch (Exception ex)
         {
@@ -292,7 +302,7 @@ public partial class NewBomsViewModel : ObservableObject
 
             var result = System.Windows.MessageBox.Show(
                 $"Ready to integrate {validatedCount} validated BOM(s) into Sage 100.\n\n" +
-                $"This will create Bill of Materials in Sage using COM integration.\n\n" +
+                $"This will create Bill of Materials in Sage using Sage Business Logic.\n\n" +
                 $"Continue?",
                 "Integrate BOMs to Sage",
                 System.Windows.MessageBoxButton.YesNo,

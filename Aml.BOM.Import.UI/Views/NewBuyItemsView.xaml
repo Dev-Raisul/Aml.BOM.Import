@@ -9,20 +9,12 @@ d:DesignHeight="600" d:DesignWidth="1000">
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <TextBlock Grid.Row="0" 
-                   Text="New Buy Items" 
-                   FontSize="24" 
-                   FontWeight="Bold" 
-                   Margin="0,0,0,15"/>
-
         <!-- Toolbar -->
-        <Border Grid.Row="1" 
+        <Border Grid.Row="0" 
                 Background="#F5F5F5" 
                 BorderBrush="#CCCCCC" 
                 BorderThickness="1" 
@@ -37,21 +29,6 @@ d:DesignHeight="600" d:DesignWidth="1000">
 
                 <!-- Action Buttons -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <Button Command="{Binding RefreshCommand}"
-                           Style="{StaticResource PrimaryButtonStyle}"
-                           Margin="0,0,10,0"
-                           Padding="15,8"
-                           ToolTip="Refresh the list of new buy items">
-                        <StackPanel Orientation="Horizontal">
-                            <iconPacks:PackIconMaterial Kind="Refresh" 
-                                                       Width="16" 
-                                                       Height="16" 
-                                                       VerticalAlignment="Center" 
-                                                       Margin="0,0,5,0"/>
-                            <TextBlock Text="Refresh" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
-                    
                     <Button Command="{Binding PrintCommand}"
                            Style="{StaticResource PrimaryButtonStyle}"
                            Padding="15,8"
@@ -87,7 +64,7 @@ d:DesignHeight="600" d:DesignWidth="1000">
         </Border>
 
         <!-- Items Grid -->
-        <Border Grid.Row="2" 
+        <Border Grid.Row="1" 
                 BorderBrush="#CCCCCC" 
                 BorderThickness="1" 
                 CornerRadius="5">
@@ -207,7 +184,7 @@ d:DesignHeight="600" d:DesignWidth="1000">
         </Border>
 
         <!-- Status Bar -->
-        <Border Grid.Row="3" 
+        <Border Grid.Row="2" 
                 Background="#F5F5F5" 
                 BorderBrush="#CCCCCC" 
                 BorderThickness="1,1,1,1" 
@@ -228,7 +205,7 @@ d:DesignHeight="600" d:DesignWidth="1000">
         </Border>
 
         <!-- Loading Overlay -->
-        <Border Grid.Row="0" Grid.RowSpan="4" 
+        <Border Grid.Row="0" Grid.RowSpan="3" 
                Background="#CC000000" 
                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
                CornerRadius="5">

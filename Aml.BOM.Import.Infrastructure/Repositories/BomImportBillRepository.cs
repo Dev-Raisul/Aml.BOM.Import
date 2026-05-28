@@ -337,6 +337,58 @@ public class BomImportBillRepository : IBomImportBillRepository
         }
     }
 
+    public async Task<int> GetPendingParentItemCountAsync()
+    {
+        _logger.LogDebug("Getting pending parent item count");
+
+        const string sql = @"
+            SELECT COUNT(DISTINCT ParentItemCode)
+            FROM isBOMImportBills
+            WHERE Status NOT IN ('Integrated', 'Duplicate')
+              AND ParentItemCode IS NOT NULL";
+
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using var command = new SqlCommand(sql, connection);
+
+            return (int)(await command.ExecuteScalarAsync() ?? 0);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to get pending parent item count", ex);
+            throw;
+        }
+    }
+
+    public async Task<int> GetValidatedParentItemCountAsync()
+    {
+        _logger.LogDebug("Getting validated parent item count");
+
+        const string sql = @"
+            SELECT COUNT(DISTINCT ParentItemCode)
+            FROM isBOMImportBills
+            WHERE Status = 'Validated'
+              AND ParentItemCode IS NOT NULL";
+
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using var command = new SqlCommand(sql, connection);
+
+            return (int)(await command.ExecuteScalarAsync() ?? 0);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to get validated parent item count", ex);
+            throw;
+        }
+    }
+
     public async Task UpdateBatchStatusAsync(IEnumerable<int> ids, string status)
     {
         var idsList = ids.ToList();

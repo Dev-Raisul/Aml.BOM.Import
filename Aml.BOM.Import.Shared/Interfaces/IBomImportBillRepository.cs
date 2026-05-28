@@ -41,4 +41,14 @@ public interface IBomImportBillRepository
     /// Gets the count of distinct parent items (ComponentItemCode that are also ParentItemCode) for a given status
     /// </summary>
     Task<int> GetParentItemCountByStatusAsync(string status);
+    
+    /// <summary>
+    /// Gets the count of distinct parent items for all pending BOMs (excluding Integrated and Duplicate)
+    /// </summary>
+    Task<int> GetPendingParentItemCountAsync();
+    
+    /// <summary>
+    /// Gets the count of distinct parent items with Validated status (ready to integrate)
+    /// </summary>
+    Task<int> GetValidatedParentItemCountAsync();
 }
