@@ -541,9 +541,37 @@ public class BomIntegrationService : IBomIntegrationService
                         oLines.nSetValue("Reference$", line.Reference);
                     }
 
-                    if (!string.IsNullOrWhiteSpace(line.Notes))
+                    // Special handling for '/C' component items - use ComponentDescription for CommentText
+                    if (line.ComponentItemCode == "/C")
+                    {
+                        if (!string.IsNullOrWhiteSpace(line.ComponentDescription))
+                        {
+                            retVal = oLines.nSetValue("CommentText$", line.ComponentDescription);
+                            if (retVal == 0)
+                            {
+                                _logger.LogWarning("Failed to set CommentText$ from ComponentDescription for /C: {0}", 
+                                    oLines.sLastErrorMsg);
+                            }
+                            else
+                            {
+                                _logger.LogInformation("Set CommentText$ from ComponentDescription for /C: {0}", 
+                                    line.ComponentDescription);
+                            }
+                        }
+                    }
+                    else if (!string.IsNullOrWhiteSpace(line.Notes))
                     {
                         oLines.nSetValue("CommentText$", line.Notes);
+                    }
+
+                    // Write the line after all fields are set
+                    retVal = oLines.nWrite();
+                    if (retVal == 0)
+                    {
+                        string errorMsg = oLines.sLastErrorMsg ?? "Unknown error";
+                        _logger.LogWarning("Failed to write BOM line for {0}: {1}", 
+                            line.ComponentItemCode, errorMsg);
+                        continue;
                     }
 
                     lineCount++;
@@ -561,18 +589,8 @@ public class BomIntegrationService : IBomIntegrationService
                 throw new InvalidOperationException("No BOM lines were successfully added");
             }
 
-            // STEP 6: Write/Save the BOM (parent object writes all lines)
-            // Try to write lines first (some systems require this)
-            try
-            {
-                oLines.nWrite();
-            }
-            catch
-            {
-                _logger.LogInformation("oLines.nWrite not supported or failed, continuing...");
-            }
-
-            // Write the main BOM object (this saves header and all lines)
+            // STEP 6: Write/Save the BOM header (lines already written individually)
+            // Write the main BOM object (this saves the header)
             retVal = billBus.nWrite();
             if (retVal == 0)
             {
