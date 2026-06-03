@@ -7,4 +7,7 @@ public interface ILoggerService
     void LogError(string message, Exception? exception = null, params object[] args);
     void LogDebug(string message, params object[] args);
     void LogCritical(string message, Exception? exception = null, params object[] args);
+    string GetLogDirectory();
+    IEnumerable<string> GetLogFiles();
 }
+

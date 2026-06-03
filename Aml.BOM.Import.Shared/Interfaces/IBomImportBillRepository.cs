@@ -36,7 +36,9 @@ public interface IBomImportBillRepository
     Task<int> GetCountByStatusAsync(string status);
     Task<int> GetCountByFileNameAsync(string fileName);
     Task<Dictionary<string, int>> GetStatusSummaryAsync();
-    
+
+
+    Task<int> GetParentItemCountByReadyStatus();
     /// <summary>
     /// Gets the count of distinct parent items (ComponentItemCode that are also ParentItemCode) for a given status
     /// </summary>

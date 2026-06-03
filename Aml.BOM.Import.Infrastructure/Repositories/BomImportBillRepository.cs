@@ -349,7 +349,7 @@ public class BomImportBillRepository : IBomImportBillRepository
                 -- Parent items (items that have a parent code)
                 SELECT DISTINCT ParentItemCode AS ItemCode
                 FROM isBOMImportBills
-                WHERE Status NOT IN ('Integrated', 'Duplicate')
+                WHERE Status NOT IN ('Integrated', 'Duplicate', 'Ready')
                   AND ParentItemCode IS NOT NULL
                 
                 UNION
@@ -357,7 +357,7 @@ public class BomImportBillRepository : IBomImportBillRepository
                 -- Standalone parent items (component items without a parent)
                 SELECT DISTINCT ComponentItemCode AS ItemCode
                 FROM isBOMImportBills
-                WHERE Status NOT IN ('Integrated', 'Duplicate')
+                WHERE Status NOT IN ('Integrated', 'Duplicate', 'Ready')
                   AND ParentItemCode IS NULL
             ) AS AllParents";
 
@@ -579,6 +579,42 @@ public class BomImportBillRepository : IBomImportBillRepository
         catch (Exception ex)
         {
             _logger.LogError("Failed to get status summary", ex);
+            throw;
+        }
+    }
+
+    public async Task<int> GetParentItemCountByReadyStatus()
+    {
+        var status = "Ready";
+        _logger.LogDebug("Getting parent item count for status: {0} (only parents where parent AND all components have this status)", status);
+
+        const string sql = @"
+            -- Count parents where the parent itself AND ALL its components have the specified status
+            SELECT COUNT(DISTINCT ib.ComponentItemCode)
+            FROM isBOMImportBills ib
+            WHERE ib.ParentItemCode IS NULL
+              AND ib.Status = @Status
+              -- Check that ALL components for this parent also have the same status
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM isBOMImportBills components
+                  WHERE components.ParentItemCode = ib.ComponentItemCode
+                    AND components.Status != @Status
+              )";
+
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using var command = new SqlCommand(sql, connection);
+            command.Parameters.AddWithValue("@Status", status);
+
+            return (int)(await command.ExecuteScalarAsync() ?? 0);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to get parent item count by status: {0}", ex, status);
             throw;
         }
     }

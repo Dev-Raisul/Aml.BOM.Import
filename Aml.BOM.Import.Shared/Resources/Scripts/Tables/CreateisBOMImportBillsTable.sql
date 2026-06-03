@@ -69,7 +69,7 @@ CREATE TABLE dbo.isBOMImportBills
     ModifiedDate DATETIME2 NOT NULL DEFAULT GETDATE(),
     
     -- Constraints
-    CONSTRAINT CK_isBOMImportBills_Status CHECK (Status IN ('New', 'Validated', 'Integrated', 'NewBuyItem', 'NewMakeItem', 'Failed', 'Duplicate')),
+    CONSTRAINT CK_isBOMImportBills_Status CHECK (Status IN ('New', 'Validated', 'Ready', 'Integrated', 'NewBuyItem', 'NewMakeItem', 'Failed', 'Duplicate')),
     CONSTRAINT CK_isBOMImportBills_ItemType CHECK (ItemType IS NULL OR ItemType IN ('Buy', 'Make', 'Phantom'))
 );
 GO
@@ -121,7 +121,7 @@ EXEC sys.sp_addextendedproperty @name = N'MS_Description', @value = N'Import fil
 EXEC sys.sp_addextendedproperty @name = N'MS_Description', @value = N'Date and time of import', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'isBOMImportBills', @level2type = N'COLUMN', @level2name = N'ImportDate';
 EXEC sys.sp_addextendedproperty @name = N'MS_Description', @value = N'Windows user who performed the import', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'isBOMImportBills', @level2type = N'COLUMN', @level2name = N'ImportWindowsUser';
 EXEC sys.sp_addextendedproperty @name = N'MS_Description', @value = N'Excel worksheet/tab name', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'isBOMImportBills', @level2type = N'COLUMN', @level2name = N'TabName';
-EXEC sys.sp_addextendedproperty @name = N'MS_Description', @value = N'Current status: New, Validated, Integrated, NewBuyItem, NewMakeItem, Failed, Duplicate', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'isBOMImportBills', @level2type = N'COLUMN', @level2name = N'Status';
+EXEC sys.sp_addextendedproperty @name = N'MS_Description', @value = N'Current status: New, Validated, Ready, Integrated, NewBuyItem, NewMakeItem, Failed, Duplicate', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'isBOMImportBills', @level2type = N'COLUMN', @level2name = N'Status';
 EXEC sys.sp_addextendedproperty @name = N'MS_Description', @value = N'Component item code from BOM', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'isBOMImportBills', @level2type = N'COLUMN', @level2name = N'ComponentItemCode';
 GO
 

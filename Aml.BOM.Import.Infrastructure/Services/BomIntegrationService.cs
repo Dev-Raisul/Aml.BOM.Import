@@ -235,22 +235,85 @@ public class BomIntegrationService : IBomIntegrationService
                 throw new InvalidOperationException($"BOM record not found: {bomImportRecordId}");
             }
 
+            // Determine parent item code
+            string parentItemCode;
             if (string.IsNullOrWhiteSpace(bomRecord.ParentItemCode))
             {
-                throw new InvalidOperationException("Parent item code is required for BOM integration");
+                // This is a parent record itself (ParentItemCode is NULL)
+                parentItemCode = bomRecord.ComponentItemCode;
+            }
+            else
+            {
+                // This is a component record
+                parentItemCode = bomRecord.ParentItemCode;
             }
 
-            // Get all BOM lines for this parent item
-            var bomLines = await _bomBillRepository.GetByParentItemCodeAsync(bomRecord.ParentItemCode);
-            var bomLinesList = bomLines.Where(b => b.Status == "Validated").ToList();
+            _logger.LogInformation("Integrating BOM for parent: {0}", parentItemCode);
 
-            if (!bomLinesList.Any())
+            // Integrate BOM by parent item code
+            return await IntegrateBomByParentAsync(parentItemCode);
+        });
+    }
+
+    /// <summary>
+    /// Integrates a BOM by parent item code after verifying all components are Ready
+    /// </summary>
+    public async Task<bool> IntegrateBomByParentAsync(string parentItemCode)
+    {
+        return await Task.Run(async () =>
+        {
+            _logger.LogInformation("Starting BOM integration for parent: {0}", parentItemCode);
+
+            if (string.IsNullOrWhiteSpace(parentItemCode))
             {
-                _logger.LogWarning("No validated BOM lines found for parent: {0}", bomRecord.ParentItemCode);
+                throw new ArgumentException("Parent item code is required", nameof(parentItemCode));
+            }
+
+            // STEP 1: Get the parent record
+            var allRecords = await _bomBillRepository.GetByComponentItemCodeAsync(parentItemCode);
+            var parentRecord = allRecords.FirstOrDefault(r => r.ParentItemCode == null);
+
+            if (parentRecord == null)
+            {
+                _logger.LogError("Parent record not found for: {0}", null, parentItemCode);
+                throw new InvalidOperationException($"Parent record not found for: {parentItemCode}");
+            }
+
+            // STEP 2: Verify parent is Ready
+            if (parentRecord.Status != "Ready")
+            {
+                _logger.LogError("Parent {0} is not Ready. Current status: {1}", null, parentItemCode, parentRecord.Status);
+                throw new InvalidOperationException($"Parent {parentItemCode} is not Ready. Current status: {parentRecord.Status}");
+            }
+
+            _logger.LogInformation("Parent {0} verified as Ready", parentItemCode);
+
+            // STEP 3: Get all components for this parent
+            var allComponents = await _bomBillRepository.GetByParentItemCodeAsync(parentItemCode);
+            var componentsList = allComponents.ToList();
+
+            if (!componentsList.Any())
+            {
+                _logger.LogWarning("No components found for parent: {0}", parentItemCode);
                 return false;
             }
 
-            // Load settings
+            // STEP 4: Verify ALL components are Ready
+            var notReadyComponents = componentsList.Where(c => c.Status != "Ready").ToList();
+            if (notReadyComponents.Any())
+            {
+                var notReadyList = string.Join(", ", notReadyComponents.Select(c => $"{c.ComponentItemCode} ({c.Status})"));
+                _logger.LogError("Not all components are Ready for parent {0}. Not ready: {1}", 
+                    null, parentItemCode, notReadyList);
+                throw new InvalidOperationException(
+                    $"Not all components are Ready for parent {parentItemCode}. " +
+                    $"Not ready components: {notReadyList}");
+            }
+
+            _logger.LogInformation("All {0} components verified as Ready for parent: {1}", 
+                componentsList.Count, parentItemCode);
+
+            // STEP 5: Load settings
             var settings = await _settingsService.GetSettingsAsync() as Application.Models.AppSettings;
             if (settings?.SageSettings == null)
             {
@@ -261,39 +324,45 @@ public class BomIntegrationService : IBomIntegrationService
 
             try
             {
-                // Initialize Sage session
+                // STEP 6: Initialize Sage session
                 session = new SageSessionService(settings.SageSettings, _logger);
                 session.InitializeSession();
 
-                // Set program context for Bill of Materials (use BM_Bill_ui based on VBS script)
+                // Set program context for Bill of Materials
                 session.SetProgramContext("BM_Bill_ui");
 
-                // Create BOM using BM_Bill_bus (includes header and lines)
-                bool bomCreated = await IntegrateBomWithLinesAsync(session, bomRecord, bomLinesList);
+                // STEP 7: Create BOM with all Ready components
+                bool bomCreated = await IntegrateBomWithLinesAsync(session, parentRecord, componentsList);
                 
                 if (!bomCreated)
                 {
-                    throw new InvalidOperationException($"Failed to create BOM for {bomRecord.ParentItemCode}");
+                    throw new InvalidOperationException($"Failed to create BOM for {parentItemCode}");
                 }
 
-                // Update integration status for all lines
-                foreach (var line in bomLinesList)
+                // STEP 8: Update integration status for parent and all components
+                await _bomBillRepository.UpdateStatusAsync(
+                    parentRecord.Id, 
+                    "Integrated", 
+                    DateTime.Now, 
+                    DateTime.Now);
+
+                foreach (var component in componentsList)
                 {
                     await _bomBillRepository.UpdateStatusAsync(
-                        line.Id, 
+                        component.Id, 
                         "Integrated", 
                         DateTime.Now, 
                         DateTime.Now);
                 }
 
-                _logger.LogInformation("BOM integration complete for parent: {0}, Lines: {1}", 
-                    bomRecord.ParentItemCode, bomLinesList.Count);
+                _logger.LogInformation("BOM integration complete for parent: {0}, Components: {1}", 
+                    parentItemCode, componentsList.Count);
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError("Fatal error during BOM integration", ex);
+                _logger.LogError("Fatal error during BOM integration for parent: {0}", ex, parentItemCode);
                 throw;
             }
             finally
@@ -306,37 +375,37 @@ public class BomIntegrationService : IBomIntegrationService
     /// <summary>
     /// Integrates a complete BOM (header + lines) using BM_Bill_bus
     /// </summary>
-    private async Task<bool> IntegrateBomWithLinesAsync(SageSessionService session, BomImportBill bomHeader, List<BomImportBill> bomLines)
+    private async Task<bool> IntegrateBomWithLinesAsync(SageSessionService session, BomImportBill parentRecord, List<BomImportBill> bomLines)
     {
         dynamic? billBus = null;
         dynamic? oLines = null;
 
         try
         {
-            _logger.LogInformation("Creating BOM for parent: {0} with {1} lines", bomHeader.ParentItemCode, bomLines.Count);
+            // Get parent item code (from parent record's ComponentItemCode)
+            string parentItemCode = parentRecord.ComponentItemCode;
+            
+            _logger.LogInformation("Creating BOM for parent: {0} with {1} lines", parentItemCode, bomLines.Count);
 
             // Create BM_Bill_bus object (combines header and detail lines)
             billBus = session.CreateBusinessObject("BM_Bill_bus");
 
             // STEP 1a: Set key value - BillNo (Parent Item Code)
-
-            //bomHeader.ParentItemCode = "TEXASITEM"; //Dummy Item code for testing - replace with actual code from bomHeader.ParentItemCode when ready
-
-            int retVal = billBus.nSetKeyValue("BillNo$", bomHeader.ParentItemCode);
+            int retVal = billBus.nSetKeyValue("BillNo$", parentItemCode);
             if (retVal == 0)
             {
                 string errorMsg = billBus.sLastErrorMsg ?? "Unknown error";
-                throw new InvalidOperationException($"nSetKeyValue BillNo$ failed for BOM {bomHeader.ParentItemCode}: {errorMsg}");
+                throw new InvalidOperationException($"nSetKeyValue BillNo$ failed for BOM {parentItemCode}: {errorMsg}");
             }
 
-            _logger.LogInformation("BOM key BillNo$ set for: {0}", bomHeader.ParentItemCode);
+            _logger.LogInformation("BOM key BillNo$ set for: {0}", parentItemCode);
 
             // STEP 1b: Set key value - Revision (default to "000")
             retVal = billBus.nSetKeyValue("Revision$", "000");
             if (retVal == 0)
             {
                 string errorMsg = billBus.sLastErrorMsg ?? "Unknown error";
-                throw new InvalidOperationException($"nSetKeyValue Revision$ failed for BOM {bomHeader.ParentItemCode}: {errorMsg}");
+                throw new InvalidOperationException($"nSetKeyValue Revision$ failed for BOM {parentItemCode}: {errorMsg}");
             }
 
             _logger.LogInformation("BOM key Revision$ set to: 000");
@@ -346,10 +415,10 @@ public class BomIntegrationService : IBomIntegrationService
             if (retVal == 0)
             {
                 string errorMsg = billBus.sLastErrorMsg ?? "Unknown error";
-                throw new InvalidOperationException($"nSetKey failed for BOM {bomHeader.ParentItemCode}: {errorMsg}");
+                throw new InvalidOperationException($"nSetKey failed for BOM {parentItemCode}: {errorMsg}");
             }
 
-            _logger.LogInformation("BOM key finalized for: {0}", bomHeader.ParentItemCode);
+            _logger.LogInformation("BOM key finalized for: {0}", parentItemCode);
 
             // STEP 2: Attempt to create new BOM (nNew)
             // This may not be supported on all versions, so we try and continue regardless
@@ -364,9 +433,14 @@ public class BomIntegrationService : IBomIntegrationService
             }
 
             // STEP 3: Set BOM header fields
-            if (!string.IsNullOrWhiteSpace(bomHeader.ParentDescription))
+            // Use parent's description (either from ParentDescription or ComponentDescription)
+            string bomDescription = !string.IsNullOrWhiteSpace(parentRecord.ParentDescription) 
+                ? parentRecord.ParentDescription 
+                : parentRecord.ComponentDescription ?? string.Empty;
+                
+            if (!string.IsNullOrWhiteSpace(bomDescription))
             {
-                retVal = billBus.nSetValue("BillDesc1$", bomHeader.ParentDescription);
+                retVal = billBus.nSetValue("BillDesc1$", bomDescription);
                 if (retVal == 0)
                 {
                     _logger.LogWarning("Failed to set BillDesc1$: {0}", billBus.sLastErrorMsg);
@@ -474,7 +548,7 @@ public class BomIntegrationService : IBomIntegrationService
 
                     lineCount++;
                     _logger.LogInformation("Added BOM line {0}: {1} -> {2} (Qty: {3})", 
-                        lineCount, bomHeader.ParentItemCode, line.ComponentItemCode, line.Quantity);
+                        lineCount, parentItemCode, line.ComponentItemCode, line.Quantity);
                 }
                 catch (Exception ex)
                 {
@@ -503,18 +577,18 @@ public class BomIntegrationService : IBomIntegrationService
             if (retVal == 0)
             {
                 string errorMsg = billBus.sLastErrorMsg ?? "Unknown error";
-                throw new InvalidOperationException($"nWrite failed for BOM {bomHeader.ParentItemCode}: {errorMsg}");
+                throw new InvalidOperationException($"nWrite failed for BOM {parentItemCode}: {errorMsg}");
             }
 
             _logger.LogInformation("BOM written to Sage successfully: {0} with {1} lines", 
-                bomHeader.ParentItemCode, lineCount);
+                parentItemCode, lineCount);
 
             await Task.CompletedTask;
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error creating BOM for {bomHeader.ParentItemCode}", ex);
+            _logger.LogError($"Error creating BOM for parent {parentRecord.ComponentItemCode}", ex);
             return false;
         }
         finally

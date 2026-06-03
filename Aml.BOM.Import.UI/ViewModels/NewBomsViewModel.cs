@@ -128,8 +128,8 @@ public partial class NewBomsViewModel : ObservableObject
             // Get status summary from repository
             var statusSummary = await _bomBillRepository.GetStatusSummaryAsync();
 
-            // Get validated count using special logic (only fully ready records for "Ready to Integrate")
-            ValidatedBomsCount = await _bomBillRepository.GetReadyToIntegrateRecordCountAsync();
+            // Get ready to integrate count (records with Status='Ready')
+            ValidatedBomsCount = statusSummary.ContainsKey("Ready") ? statusSummary["Ready"] : 0;
             
             // Get total validated records (all records with Status='Validated' for the validation label)
             TotalValidatedRecords = statusSummary.ContainsKey("Validated") ? statusSummary["Validated"] : 0;
@@ -139,9 +139,9 @@ public partial class NewBomsViewModel : ObservableObject
             DuplicateBomsCount = statusSummary.ContainsKey("Duplicate") ? statusSummary["Duplicate"] : 0;
             FailedBomsCount = statusSummary.ContainsKey("Failed") ? statusSummary["Failed"] : 0;
 
-            // Calculate total pending (exclude Integrated and Duplicate)
+            // Calculate total pending (exclude Integrated, Duplicate, and Ready)
             TotalPendingBoms = statusSummary
-                .Where(kvp => kvp.Key != "Integrated" && kvp.Key != "Duplicate")
+                .Where(kvp => kvp.Key != "Integrated" && kvp.Key != "Duplicate" && kvp.Key != "Ready")
                 .Sum(kvp => kvp.Value);
 
             // Get parent item counts for each status
@@ -149,9 +149,9 @@ public partial class NewBomsViewModel : ObservableObject
             NewBuyItemsParentCount = await _bomBillRepository.GetParentItemCountByStatusAsync("NewBuyItem");
             DuplicateBomsParentCount = await _bomBillRepository.GetParentItemCountByStatusAsync("Duplicate");
 
-            // Get parent counts for pending and validated
+            // Get parent counts for pending and validated (Ready status)
             TotalPendingBomsParentCount = await _bomBillRepository.GetPendingParentItemCountAsync();
-            ValidatedBomsParentCount = await _bomBillRepository.GetValidatedParentItemCountAsync();
+            ValidatedBomsParentCount = await _bomBillRepository.GetParentItemCountByReadyStatus();
 
             // Notify computed property changes
             OnPropertyChanged(nameof(NotValidatedCount));
@@ -295,16 +295,17 @@ public partial class NewBomsViewModel : ObservableObject
         
         try
         {
-            // Get count of BOMs ready to integrate (Validated status)
-            var validatedCount = await _bomBillRepository.GetCountByStatusAsync("Validated");
+            // Get count of BOMs ready to integrate (Ready status)
+            var readyCount = await _bomBillRepository.GetCountByStatusAsync("Ready");
             
-            if (validatedCount == 0)
+            if (readyCount == 0)
             {
                 System.Windows.MessageBox.Show(
                     "No BOMs are ready for integration.\n\n" +
                     "BOMs must be validated and cannot contain:\n" +
                     "• New buy items (must be created in Sage first)\n" +
-                    "• New make items that haven't been integrated",
+                    "• New make items that haven't been integrated\n\n" +
+                    "Once a BOM and all its components are validated, it will be marked as 'Ready'.",
                     "No BOMs Ready",
                     System.Windows.MessageBoxButton.OK,
                     System.Windows.MessageBoxImage.Information);
@@ -314,7 +315,7 @@ public partial class NewBomsViewModel : ObservableObject
             }
 
             var result = System.Windows.MessageBox.Show(
-                $"Ready to integrate {validatedCount} validated BOM(s) into Sage 100.\n\n" +
+                $"Ready to integrate {readyCount} BOM record(s) into Sage 100.\n\n" +
                 $"This will create Bill of Materials in Sage using Sage Business Logic.\n\n" +
                 $"Continue?",
                 "Integrate BOMs to Sage",
@@ -329,42 +330,44 @@ public partial class NewBomsViewModel : ObservableObject
 
             StatusMessage = "Integrating BOMs into Sage 100...";
             
-            // Get all validated BOM records grouped by parent item
-            var validatedBills = await _bomBillRepository.GetByStatusAsync("Validated");
-            var bomGroups = validatedBills.GroupBy(b => b.ParentItemCode).ToList();
+            // Get all Ready parent BOM records
+            var readyBills = await _bomBillRepository.GetByStatusAsync("Ready");
+            var parentBoms = readyBills
+                .Where(b => b.ParentItemCode == null) // Only parent items
+                .ToList();
 
             int successCount = 0;
             int failedCount = 0;
             var errors = new List<string>();
 
-            foreach (var bomGroup in bomGroups)
+            foreach (var parent in parentBoms)
             {
                 try
                 {
-                    var parentItem = bomGroup.Key;
-                    var firstBill = bomGroup.First();
+                    var parentItemCode = parent.ComponentItemCode;
                     
-                    _logger.LogInformation("Integrating BOM for parent: {0}", parentItem);
+                    _logger.LogInformation("Integrating BOM for parent: {0}", parentItemCode);
                     
-                    // Integrate the BOM (using the first record ID to get header info)
-                    bool success = await _bomIntegrationService.IntegrateBomAsync(firstBill.Id);
+                    // Integrate the BOM by parent item code
+                    // This will verify all components are Ready before integration
+                    bool success = await _bomIntegrationService.IntegrateBomByParentAsync(parentItemCode);
                     
                     if (success)
                     {
                         successCount++;
-                        _logger.LogInformation("BOM integrated successfully: {0}", parentItem);
+                        _logger.LogInformation("BOM integrated successfully: {0}", parentItemCode);
                     }
                     else
                     {
                         failedCount++;
-                        errors.Add($"{parentItem}: Integration failed");
-                        _logger.LogWarning("BOM integration failed: {0}", parentItem);
+                        errors.Add($"{parentItemCode}: Integration failed");
+                        _logger.LogWarning("BOM integration failed: {0}", parentItemCode);
                     }
                 }
                 catch (Exception ex)
                 {
                     failedCount++;
-                    var parentItem = bomGroup.Key ?? "Unknown";
+                    var parentItem = parent.ComponentItemCode ?? "Unknown";
                     errors.Add($"{parentItem}: {ex.Message}");
                     _logger.LogError($"Failed to integrate BOM for parent {parentItem}", ex);
                 }

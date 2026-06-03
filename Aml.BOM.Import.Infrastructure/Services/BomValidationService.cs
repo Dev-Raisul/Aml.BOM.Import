@@ -222,6 +222,9 @@ public class BomValidationService : IBomValidationService
             var summary = await _billRepository.GetStatusSummaryAsync();
             result.StatusSummary = summary;
 
+            // Mark BOMs as "Ready" if parent and all components are validated
+            await MarkReadyToIntegrateBomsAsync();
+
             // Copy newly identified make items into the dedicated isBOMImport_NewMakeItems table.
             // Items already present (from a prior import) are silently skipped.
             try
@@ -304,7 +307,7 @@ public class BomValidationService : IBomValidationService
         _logger.LogInformation("Re-validating all pending BOMs");
 
         // Reset status of all non-duplicate bills back to "New" for re-validation
-        var pendingStatuses = new[] { "Validated", "Failed", "NewBuyItem", "NewMakeItem" };
+        var pendingStatuses = new[] { "Validated", "Ready", "Failed", "NewBuyItem", "NewMakeItem" };
         
         foreach (var status in pendingStatuses)
         {
@@ -479,4 +482,47 @@ public class BomValidationService : IBomValidationService
             return 0;
         }
     }
+
+    private async Task MarkReadyToIntegrateBomsAsync()
+    {
+        _logger.LogInformation("Marking BOMs as 'Ready' where parent and all components are validated");
+
+        try
+        {
+            // Get all validated bills
+            var validatedBills = (await _billRepository.GetByStatusAsync("Validated")).ToList();
+            
+            // Group by parent (items with no ParentItemCode are parents)
+            var parents = validatedBills.Where(b => b.ParentItemCode == null).ToList();
+            
+            foreach (var parent in parents)
+            {
+                var parentItemCode = parent.ComponentItemCode;
+                
+                // Get all components for this parent
+                var components = validatedBills.Where(b => b.ParentItemCode == parentItemCode).ToList();
+                
+                // Check if ALL components are validated
+                var allComponents = (await _billRepository.GetByParentItemCodeAsync(parentItemCode)).ToList();
+                var allValidated = allComponents.All(c => c.Status == "Validated");
+                
+                if (allValidated && allComponents.Any())
+                {
+                    // Mark parent and all components as "Ready"
+                    var idsToUpdate = new List<int> { parent.Id };
+                    idsToUpdate.AddRange(allComponents.Select(c => c.Id));
+                    
+                    await _billRepository.UpdateBatchStatusAsync(idsToUpdate, "Ready");
+                    
+                    _logger.LogInformation("Marked BOM as Ready: Parent={0}, Components={1}", 
+                        parentItemCode, allComponents.Count);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to mark BOMs as Ready", ex);
+        }
+    }
 }
+

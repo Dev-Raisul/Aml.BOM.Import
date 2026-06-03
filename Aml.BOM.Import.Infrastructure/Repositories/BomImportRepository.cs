@@ -16,47 +16,25 @@ public class BomImportRepository : IBomImportRepository
 
     public async Task<IEnumerable<object>> GetAllAsync()
     {
-        _logger.LogDebug("Retrieving all BOMs ready to integrate (parent exists, all components validated, and nested parents validated)");
+        _logger.LogDebug("Retrieving all parent BOMs with 'Ready' status");
 
         const string sql = @"
             SELECT DISTINCT
-                ib.ParentItemCode AS ItemCode,
-                COALESCE(ci.ItemCodeDesc, ib.ParentDescription) AS Description,
-                MIN(ib.ImportFileName) AS ImportFileName,
-                MIN(ib.ImportDate) AS ImportDate,
-                MIN(ib.ImportWindowsUser) AS ImportedBy,
-                'Validated' AS Status,
-                COUNT(*) AS ComponentCount
+                ib.ComponentItemCode AS ItemCode,
+                COALESCE(ci.ItemCodeDesc, ib.ComponentItemCode) AS Description,
+                ib.ImportFileName,
+                ib.ImportDate,
+                ib.ImportWindowsUser AS ImportedBy,
+                ib.Status,
+                (SELECT COUNT(*) 
+                 FROM isBOMImportBills components 
+                 WHERE components.ParentItemCode = ib.ComponentItemCode 
+                   AND components.Status = 'Ready') AS ComponentCount
             FROM isBOMImportBills ib
-            LEFT JOIN CI_Item ci ON ib.ParentItemCode = ci.ItemCode
-            WHERE ib.ParentItemCode IS NOT NULL
-              -- Parent MUST exist in CI_Item (JOIN must find a match)
-              AND ci.ItemCode IS NOT NULL
-              -- All components must be validated
-              AND ib.ParentItemCode NOT IN (
-                  SELECT DISTINCT ParentItemCode
-                  FROM isBOMImportBills
-                  WHERE ParentItemCode IS NOT NULL
-                    AND Status != 'Validated'
-              )
-              -- If this parent is used as a component elsewhere, it must be validated
-              AND (
-                  -- Either the parent is NOT used as a component anywhere
-                  ib.ParentItemCode NOT IN (
-                      SELECT DISTINCT ComponentItemCode
-                      FROM isBOMImportBills
-                      WHERE ComponentItemCode IS NOT NULL
-                  )
-                  -- OR if it IS used as a component, it must be validated
-                  OR ib.ParentItemCode IN (
-                      SELECT DISTINCT ComponentItemCode
-                      FROM isBOMImportBills
-                      WHERE ComponentItemCode IS NOT NULL
-                        AND Status = 'Validated'
-                  )
-              )
-            GROUP BY ib.ParentItemCode, COALESCE(ci.ItemCodeDesc, ib.ParentDescription)
-            ORDER BY ib.ParentItemCode";
+            LEFT JOIN CI_Item ci ON ib.ComponentItemCode = ci.ItemCode
+            WHERE ib.ParentItemCode IS NULL
+              AND ib.Status = 'Ready'
+            ORDER BY ib.ImportDate DESC, ib.ComponentItemCode";
 
         var boms = new List<object>();
 
@@ -84,12 +62,12 @@ public class BomImportRepository : IBomImportRepository
                 });
             }
 
-            _logger.LogInformation("Retrieved {0} fully validated BOMs ready to integrate (including nested parent validation)", boms.Count);
+            _logger.LogInformation("Retrieved {0} BOMs with 'Ready' status", boms.Count);
             return boms;
         }
         catch (Exception ex)
         {
-            _logger.LogError("Failed to retrieve BOMs ready to integrate", ex);
+            _logger.LogError("Failed to retrieve Ready BOMs", ex);
             throw;
         }
     }

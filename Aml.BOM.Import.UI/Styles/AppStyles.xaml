@@ -29,6 +29,10 @@
     <views:DuplicateBomsView/>
 </DataTemplate>
 
+<DataTemplate DataType="{x:Type viewModels:LogsViewModel}">
+    <views:LogsView/>
+</DataTemplate>
+
 <DataTemplate DataType="{x:Type viewModels:SettingsViewModel}">
     <views:SettingsView/>
 </DataTemplate>
@@ -154,6 +158,72 @@
             </Trigger>
         </Style.Triggers>
     </Style>
+
+    <!-- Danger Button Style -->
+    <Style x:Key="DangerButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="#E74C3C"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="15,8"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" 
+                           Padding="{TemplateBinding Padding}"
+                           CornerRadius="4">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#C0392B"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Background" Value="#BDC3C7"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Icon Button Style -->
+    <Style x:Key="IconButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="#3498DB"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" 
+                           Padding="{TemplateBinding Padding}"
+                           CornerRadius="4">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#ECF0F1"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Card Shadow Effect -->
+    <DropShadowEffect x:Key="CardShadow" 
+                      BlurRadius="10" 
+                      ShadowDepth="2" 
+                      Opacity="0.2" 
+                      Color="Black"/>
+
+    <!-- Primary Brush -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#3498DB"/>
 
     <!-- DataGrid Style -->
     <Style TargetType="DataGrid">

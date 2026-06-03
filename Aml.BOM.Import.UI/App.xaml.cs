@@ -97,6 +97,7 @@ public partial class App : System.Windows.Application
                     new DuplicateBomsViewModel(
                         sp.GetRequiredService<BomImportService>(),
                         sp.GetRequiredService<IBomImportBillRepository>()));
+                services.AddTransient<LogsViewModel>();
                 services.AddTransient<SettingsViewModel>();
 
                 // Register MainWindow
