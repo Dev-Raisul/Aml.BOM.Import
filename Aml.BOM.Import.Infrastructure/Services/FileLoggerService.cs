@@ -13,8 +13,7 @@ public class FileLoggerService : ILoggerService
 
     public FileLoggerService()
     {
-        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        _logDirectory = Path.Combine(appDataPath, "Aml.BOM.Import", "Logs");
+        _logDirectory = @"C:\InfoSpring\Aml.BOM.Import\logs";
         Directory.CreateDirectory(_logDirectory);
         
         var today = DateTime.Now.ToString("yyyy-MM-dd");
