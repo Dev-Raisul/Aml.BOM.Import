@@ -83,6 +83,7 @@ public class BomIntegrationService : IBomIntegrationService
                         {
                             // Mark as integrated in database
                             await _makeItemRepository.MarkAsIntegratedAsync(item.ItemCode, item.ImportFileName);
+                            item.IsIntegrated = true;
                             successCount++;
                             _logger.LogInformation("Item integrated successfully: {0}", item.ItemCode);
                         }

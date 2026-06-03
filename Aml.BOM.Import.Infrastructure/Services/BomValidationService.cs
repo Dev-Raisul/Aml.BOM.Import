@@ -35,10 +35,10 @@ public class BomValidationService : IBomValidationService
             var a = 0;
         }
 
-        //if(bill.ParentItemCode== "EX-ACL5-XP-95.00P-1EC" || bill.ComponentItemCode== "EX-ACL5-XP-95.00P-1EC")
-        //{
-        //    var a = 0;
-        //}
+        if(bill.ParentItemCode== "292S82" || bill.ComponentItemCode== "292S82")
+        {
+            var a = 0;
+        }
         // Check if it's a duplicate BOM
         if (!string.IsNullOrWhiteSpace(bill.ParentItemCode))
         {
@@ -50,6 +50,23 @@ public class BomValidationService : IBomValidationService
                 result.Errors.Add("This BOM is a duplicate and will be ignored");
                 return result;
             }
+        }
+
+        // Check if component is a Phantom (Type = 'P')
+        // Phantoms don't need to exist in CI_Item and are automatically validated
+        string componentType = bill.ProductType?.Trim().ToUpper() ?? "";
+        bool isPhantom = componentType == "P" || componentType == "PHANTOM";
+
+        if (isPhantom)
+        {
+            _logger.LogInformation("Component {0} is a Phantom - automatically validated (no CI_Item check needed)", bill.ComponentItemCode);
+            
+            result.ComponentExists = true; // Treat as exists (doesn't need to)
+            result.ComponentItemType = "Phantom";
+            result.IsValid = true;
+            result.ValidationMessage = "Phantom item - automatically validated";
+            
+            return result;
         }
 
         // Validate parent item (if specified) - for informational purposes only
@@ -124,6 +141,27 @@ public class BomValidationService : IBomValidationService
                 // Validate each bill
                 foreach (var bill in bills.Where(b => b.Status == "New"))
                 {
+                    // Check if component is a Phantom (Type = 'P')
+                    string componentType = bill.ProductType?.Trim().ToUpper() ?? "";
+                    bool isPhantom = componentType == "P" || componentType == "PHANTOM";
+
+                    if (isPhantom)
+                    {
+                        // Phantoms are automatically validated - they don't need to exist in CI_Item
+                        bill.Status = "Validated";
+                        bill.DateValidated = DateTime.Now;
+                        bill.ItemExists = true; // Treat as exists (conceptually)
+                        bill.ItemType = "Phantom";
+                        bill.ValidationMessage = "Phantom item - automatically validated";
+                        result.ValidatedRecords++;
+                        
+                        _logger.LogInformation("Phantom component {0} automatically validated", bill.ComponentItemCode);
+                        
+                        // Update the bill in database
+                        await _billRepository.UpdateAsync(bill);
+                        continue;
+                    }
+
                     var validationResult = await ValidateBillAsync(bill);
 
                     // Update bill based on validation
@@ -135,7 +173,7 @@ public class BomValidationService : IBomValidationService
                     else if (!validationResult.ComponentExists)
                     {
                         // Determine if it's a buy or make item based on Procurement Type from Excel
-                        string procurementType = bill.Type?.Trim().ToUpper() ?? "";
+                        string procurementType = bill.ProcurementType?.Trim().ToUpper() ?? "";
                         
                         if (procurementType == "M" || procurementType == "MAKE")
                         {

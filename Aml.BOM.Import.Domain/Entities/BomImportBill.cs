@@ -39,6 +39,15 @@ public class BomImportBill
     public decimal? UnitCost { get; set; }
     public decimal? ExtendedCost { get; set; }
     
+    // New fields from Excel file
+    public string? ProductLine { get; set; }
+    public string? ProductType { get; set; }
+    public string? ProcurementType { get; set; }
+    public string? SubProductFamily { get; set; }
+    public bool? StagedItem { get; set; }
+    public bool? Coated { get; set; }
+    public bool? GoldenStandard { get; set; }
+    
     // Validation Fields
     public bool ItemExists { get; set; }
     public string? ItemType { get; set; } // Buy, Make

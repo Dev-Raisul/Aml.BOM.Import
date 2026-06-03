@@ -184,20 +184,39 @@ public class FileImportService : IFileImportService
 
                     // BOM data from Excel columns
                     LineNumber = lineNumber,
+                    
+                    // Parent Item mapping
                     ParentItemCode = GetCellValue(row, columnMap, "Parent Item", "Parent Item Code", "Parent Part"),
-                    ParentDescription = GetCellValue(row, columnMap, "Parent Description", "Parent Desc"),
+                    ParentDescription = null, // Not in Excel file
+                    
+                    // Component Item mapping
+                    ComponentItemCode = GetCellValue(row, columnMap, "Component Item", "Component", "Item Code", "Part Number") ?? string.Empty,
+                    ComponentDescription = GetCellValue(row, columnMap, "Item Description", "Description", "Component Description"),
+                    
+                    // Quantity mapping
+                    Quantity = ParseDecimal(GetCellValue(row, columnMap, "Qty Per", "Quantity", "Qty"), 0),
+                    UnitOfMeasure = GetCellValue(row, columnMap, "Standard Unit of Measure", "UOM", "Unit", "Unit of Measure"),
+                    
+                    // BOM fields (not in current Excel structure)
                     BOMLevel = GetCellValue(row, columnMap, "Level", "BOM Level"),
                     BOMNumber = GetCellValue(row, columnMap, "BOM Number", "BOM#", "BOM No"),
-                    ComponentItemCode = GetCellValue(row, columnMap, "Component", "Component Item", "Item Code", "Part Number") ?? string.Empty,
-                    ComponentDescription = GetCellValue(row, columnMap, "Description", "Component Description", "Item Description"),
-                    Quantity = ParseDecimal(GetCellValue(row, columnMap, "Quantity", "Qty"), 0),
-                    UnitOfMeasure = GetCellValue(row, columnMap, "UOM", "Unit", "Unit of Measure"),
+                    
+                    // Additional fields (not in current Excel - may be needed later)
                     Reference = GetCellValue(row, columnMap, "Reference", "Ref", "Designator"),
                     Notes = GetCellValue(row, columnMap, "Notes", "Comments", "Remarks"),
-                    Category = GetCellValue(row, columnMap, "Category", "Type"),
-                    Type = GetCellValue(row, columnMap, "Procurement Type", "Procurement", "Item Type", "Type"),
+                    Category = GetCellValue(row, columnMap, "Category"),
+                    Type = GetCellValue(row, columnMap, "Product Type", "Type"),
                     UnitCost = ParseDecimal(GetCellValue(row, columnMap, "Unit Cost", "Cost", "Price"), null),
                     ExtendedCost = ParseDecimal(GetCellValue(row, columnMap, "Extended Cost", "Total Cost", "Total"), null),
+                    
+                    // New fields from Excel file
+                    ProductLine = GetCellValue(row, columnMap, "Product Line"),
+                    ProductType = GetCellValue(row, columnMap, "Product Type"),
+                    ProcurementType = GetCellValue(row, columnMap, "Procurement Type"),
+                    SubProductFamily = GetCellValue(row, columnMap, "Sub Product Family"),
+                    StagedItem = ParseBoolean(GetCellValue(row, columnMap, "Staged Item")),
+                    Coated = ParseBoolean(GetCellValue(row, columnMap, "Coated")),
+                    GoldenStandard = ParseBoolean(GetCellValue(row, columnMap, "Golden Standard")),
 
                     // Audit fields
                     CreatedDate = DateTime.Now,
@@ -267,6 +286,38 @@ public class FileImportService : IFileImportService
         }
 
         return defaultValue ?? 0;
+    }
+
+    private bool? ParseBoolean(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        // Try standard boolean parsing
+        if (bool.TryParse(value, out bool result))
+        {
+            return result;
+        }
+
+        // Check for common boolean representations
+        var upperValue = value.Trim().ToUpper();
+        
+        // True values
+        if (upperValue == "YES" || upperValue == "Y" || upperValue == "1" || upperValue == "TRUE")
+        {
+            return true;
+        }
+
+        // False values
+        if (upperValue == "NO" || upperValue == "N" || upperValue == "0" || upperValue == "FALSE")
+        {
+            return false;
+        }
+
+        // If not recognized, return null
+        return null;
     }
 
     public async Task<bool> ValidateFileFormatAsync(string filePath)

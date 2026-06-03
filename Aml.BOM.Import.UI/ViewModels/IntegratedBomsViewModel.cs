@@ -30,8 +30,8 @@ public partial class IntegratedBomsViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            // TODO: Filter by integrated status
-            var boms = await _bomImportService.GetAllBomsAsync();
+            // Get only integrated BOMs (Status = 'Integrated')
+            var boms = await _bomImportService.GetIntegratedBomsAsync();
             Boms = new ObservableCollection<object>(boms);
         }
         finally

@@ -3,6 +3,7 @@ namespace Aml.BOM.Import.Shared.Interfaces;
 public interface IBomImportRepository
 {
     Task<IEnumerable<object>> GetAllAsync();
+    Task<IEnumerable<object>> GetIntegratedBomsAsync();
     Task<object?> GetByIdAsync(int id);
     Task<int> AddAsync(object bomImportRecord);
     Task UpdateAsync(object bomImportRecord);

@@ -95,6 +95,11 @@ public class BomImportService
         return await _bomImportRepository.GetAllAsync();
     }
 
+    public async Task<IEnumerable<object>> GetIntegratedBomsAsync()
+    {
+        return await _bomImportRepository.GetIntegratedBomsAsync();
+    }
+
     public async Task<AppValidationResult> ValidateBomAsync(int bomImportRecordId)
     {
         // TODO: Implement BOM validation logic

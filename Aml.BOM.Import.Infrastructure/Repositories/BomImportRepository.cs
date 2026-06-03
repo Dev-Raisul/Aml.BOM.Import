@@ -94,6 +94,66 @@ public class BomImportRepository : IBomImportRepository
         }
     }
 
+    public async Task<IEnumerable<object>> GetIntegratedBomsAsync()
+    {
+        _logger.LogDebug("Retrieving integrated BOMs (parent items with Status='Integrated')");
+
+        const string sql = @"
+            SELECT DISTINCT
+                ib.ParentItemCode AS ItemCode,
+                COALESCE(ci.ItemCodeDesc, ib.ParentDescription) AS Description,
+                MIN(ib.ImportFileName) AS ImportFileName,
+                MIN(ib.ImportDate) AS ImportDate,
+                MIN(ib.DateIntegrated) AS IntegratedDate,
+                MIN(ib.ImportWindowsUser) AS ImportedBy,
+                'Integrated' AS Status,
+                COUNT(*) AS ComponentCount
+            FROM isBOMImportBills ib
+            LEFT JOIN CI_Item ci ON ib.ParentItemCode = ci.ItemCode
+            WHERE ib.ParentItemCode IS NOT NULL
+              AND ib.Status = 'Integrated'
+            GROUP BY ib.ParentItemCode, COALESCE(ci.ItemCodeDesc, ib.ParentDescription)
+            ORDER BY MIN(ib.DateIntegrated) DESC, ib.ParentItemCode";
+
+        var boms = new List<object>();
+
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using var command = new SqlCommand(sql, connection);
+            using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                boms.Add(new
+                {
+                    ItemCode = reader.GetString(reader.GetOrdinal("ItemCode")),
+                    Description = reader.IsDBNull(reader.GetOrdinal("Description")) 
+                        ? string.Empty 
+                        : reader.GetString(reader.GetOrdinal("Description")),
+                    ImportFileName = reader.GetString(reader.GetOrdinal("ImportFileName")),
+                    ImportDate = reader.GetDateTime(reader.GetOrdinal("ImportDate")),
+                    IntegratedDate = reader.IsDBNull(reader.GetOrdinal("IntegratedDate"))
+                        ? (DateTime?)null
+                        : reader.GetDateTime(reader.GetOrdinal("IntegratedDate")),
+                    ImportedBy = reader.GetString(reader.GetOrdinal("ImportedBy")),
+                    Status = reader.GetString(reader.GetOrdinal("Status")),
+                    ComponentCount = reader.GetInt32(reader.GetOrdinal("ComponentCount"))
+                });
+            }
+
+            _logger.LogInformation("Retrieved {0} integrated BOMs", boms.Count);
+            return boms;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to retrieve integrated BOMs", ex);
+            throw;
+        }
+    }
+
     public async Task<object?> GetByIdAsync(int id)
     {
         // TODO: Implement SQL query to retrieve BOM import record by ID

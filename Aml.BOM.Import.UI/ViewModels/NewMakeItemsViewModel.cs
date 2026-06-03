@@ -444,7 +444,7 @@ public partial class NewMakeItemsViewModel : ObservableObject
 
         var result = MessageBox.Show(
             $"Ready to integrate {itemsToIntegrate.Count} make items into Sage 100.\n\n" +
-            $"This will create the items in Sage using COM integration. Continue?",
+            $"This will create the items in Sage using Sage Business Object. Continue?",
             "Integrate Make Items",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);

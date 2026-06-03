@@ -50,9 +50,18 @@ CREATE TABLE dbo.isBOMImportBills
     UnitCost DECIMAL(18,4) NULL,
     ExtendedCost DECIMAL(18,4) NULL,
     
+    -- New Fields from Excel Import
+    ProductLine NVARCHAR(50) NULL,
+    ProductType NVARCHAR(50) NULL,
+    ProcurementType NVARCHAR(50) NULL,
+    SubProductFamily NVARCHAR(100) NULL,
+    StagedItem BIT NULL,
+    Coated BIT NULL,
+    GoldenStandard BIT NULL,
+    
     -- Validation Fields
     ItemExists BIT NOT NULL DEFAULT 0,
-    ItemType NVARCHAR(20) NULL, -- Buy, Make
+    ItemType NVARCHAR(20) NULL, -- Buy, Make, Phantom
     ValidationMessage NVARCHAR(500) NULL,
     
     -- Audit Fields
@@ -61,7 +70,7 @@ CREATE TABLE dbo.isBOMImportBills
     
     -- Constraints
     CONSTRAINT CK_isBOMImportBills_Status CHECK (Status IN ('New', 'Validated', 'Integrated', 'NewBuyItem', 'NewMakeItem', 'Failed', 'Duplicate')),
-    CONSTRAINT CK_isBOMImportBills_ItemType CHECK (ItemType IS NULL OR ItemType IN ('Buy', 'Make'))
+    CONSTRAINT CK_isBOMImportBills_ItemType CHECK (ItemType IS NULL OR ItemType IN ('Buy', 'Make', 'Phantom'))
 );
 GO
 
@@ -126,6 +135,6 @@ WHERE TABLE_NAME = 'isBOMImportBills';
 GO
 
 PRINT 'Table isBOMImportBills created successfully in MAS_AML database!';
-PRINT 'Total Columns: 27';
+PRINT 'Total Columns: 34';
 PRINT 'Total Indexes: 8';
 GO

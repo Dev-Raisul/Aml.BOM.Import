@@ -26,14 +26,120 @@ d:DesignHeight="450" d:DesignWidth="800">
         <!-- BOMs Grid -->
         <DataGrid Grid.Row="1" 
                  ItemsSource="{Binding Boms}"
-                 SelectedItem="{Binding SelectedBom}">
+                 SelectedItem="{Binding SelectedBom}"
+                 AutoGenerateColumns="False"
+                 IsReadOnly="True"
+                 SelectionMode="Single"
+                 GridLinesVisibility="Horizontal"
+                 HeadersVisibility="Column"
+                 AlternatingRowBackground="#F9F9F9"
+                 RowHeight="35"
+                 FontSize="12">
+            
+            <DataGrid.ColumnHeaderStyle>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="#4CAF50"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="Padding" Value="10,8"/>
+                    <Setter Property="BorderBrush" Value="#388E3C"/>
+                    <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                </Style>
+            </DataGrid.ColumnHeaderStyle>
+
+            <DataGrid.CellStyle>
+                <Style TargetType="DataGridCell">
+                    <Setter Property="Padding" Value="10,5"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#E8F5E9"/>
+                            <Setter Property="Foreground" Value="Black"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.CellStyle>
+            
             <DataGrid.Columns>
-                <DataGridTextColumn Header="BOM Number" Binding="{Binding BomNumber}" Width="150"/>
-                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
-                <DataGridTextColumn Header="Import Date" Binding="{Binding ImportDate, StringFormat='yyyy-MM-dd'}" Width="120"/>
-                <DataGridTextColumn Header="Integrated Date" Binding="{Binding IntegratedDate, StringFormat='yyyy-MM-dd'}" Width="120"/>
-                <DataGridTextColumn Header="Integrated By" Binding="{Binding IntegratedBy}" Width="120"/>
+                <DataGridTextColumn Header="Parent Item Code" 
+                                   Binding="{Binding ItemCode}" 
+                                   Width="150"
+                                   FontWeight="SemiBold"/>
+                <DataGridTextColumn Header="Description" 
+                                   Binding="{Binding Description}" 
+                                   Width="*"
+                                   MinWidth="200"/>
+                <DataGridTextColumn Header="Components" 
+                                   Binding="{Binding ComponentCount}" 
+                                   Width="100">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Foreground" Value="#4CAF50"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="File Name" 
+                                   Binding="{Binding ImportFileName}" 
+                                   Width="200"/>
+                <DataGridTextColumn Header="Import Date" 
+                                   Binding="{Binding ImportDate, StringFormat='yyyy-MM-dd HH:mm'}" 
+                                   Width="140"/>
+                <DataGridTextColumn Header="Integrated Date" 
+                                   Binding="{Binding IntegratedDate, StringFormat='yyyy-MM-dd HH:mm'}" 
+                                   Width="140"/>
+                <DataGridTextColumn Header="Imported By" 
+                                   Binding="{Binding ImportedBy}" 
+                                   Width="120"/>
+                <DataGridTextColumn Header="Status" 
+                                   Binding="{Binding Status}" 
+                                   Width="100">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Foreground" Value="#4CAF50"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
             </DataGrid.Columns>
+            
+            <!-- Empty State -->
+            <DataGrid.Style>
+                <Style TargetType="DataGrid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Boms.Count}" Value="0">
+                            <Setter Property="Background">
+                                <Setter.Value>
+                                    <VisualBrush Stretch="None">
+                                        <VisualBrush.Visual>
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="?" 
+                                                          FontSize="48" 
+                                                          HorizontalAlignment="Center" 
+                                                          Margin="0,0,0,10"
+                                                          Opacity="0.3"
+                                                          Foreground="#4CAF50"/>
+                                                <TextBlock Text="No integrated BOMs yet" 
+                                                          FontSize="16" 
+                                                          Foreground="Gray" 
+                                                          HorizontalAlignment="Center"/>
+                                                <TextBlock Text="BOMs will appear here after successful integration" 
+                                                          FontSize="12" 
+                                                          Foreground="LightGray" 
+                                                          HorizontalAlignment="Center" 
+                                                          Margin="0,5,0,0"/>
+                                            </StackPanel>
+                                        </VisualBrush.Visual>
+                                    </VisualBrush>
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.Style>
         </DataGrid>
 
         <!-- Loading Overlay -->

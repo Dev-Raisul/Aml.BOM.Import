@@ -25,14 +25,16 @@ public class BomImportBillRepository : IBomImportBillRepository
             (ImportFileName, ImportDate, ImportWindowsUser, TabName, Status, 
              ParentItemCode, ParentDescription, BOMLevel, BOMNumber,
              LineNumber, ComponentItemCode, ComponentDescription, Quantity, UnitOfMeasure, 
-             Reference, Notes, Category, Type, UnitCost, ExtendedCost,
-             ItemExists, ItemType, ValidationMessage, CreatedDate, ModifiedDate)
+             ItemExists, ValidationMessage, 
+             ProductLine, ProductType, ProcurementType, SubProductFamily, StagedItem, Coated, GoldenStandard,
+             CreatedDate, ModifiedDate)
             VALUES 
             (@ImportFileName, @ImportDate, @ImportWindowsUser, @TabName, @Status,
              @ParentItemCode, @ParentDescription, @BOMLevel, @BOMNumber,
              @LineNumber, @ComponentItemCode, @ComponentDescription, @Quantity, @UnitOfMeasure,
-             @Reference, @Notes, @Category, @Type, @UnitCost, @ExtendedCost,
-             @ItemExists, @ItemType, @ValidationMessage, @CreatedDate, @ModifiedDate);
+             @ItemExists, @ValidationMessage,
+             @ProductLine, @ProductType, @ProcurementType, @SubProductFamily, @StagedItem, @Coated, @GoldenStandard,
+             @CreatedDate, @ModifiedDate);
             SELECT CAST(SCOPE_IDENTITY() as int);";
 
         try
@@ -77,14 +79,16 @@ public class BomImportBillRepository : IBomImportBillRepository
                         (ImportFileName, ImportDate, ImportWindowsUser, TabName, Status, 
                          ParentItemCode, ParentDescription, BOMLevel, BOMNumber,
                          LineNumber, ComponentItemCode, ComponentDescription, Quantity, UnitOfMeasure, 
-                         Reference, Notes, Category, Type, UnitCost, ExtendedCost,
-                         ItemExists, ItemType, ValidationMessage, CreatedDate, ModifiedDate)
+                         ItemExists, ValidationMessage,
+                         ProductLine, ProductType, ProcurementType, SubProductFamily, StagedItem, Coated, GoldenStandard,
+                         CreatedDate, ModifiedDate)
                         VALUES 
                         (@ImportFileName, @ImportDate, @ImportWindowsUser, @TabName, @Status,
                          @ParentItemCode, @ParentDescription, @BOMLevel, @BOMNumber,
                          @LineNumber, @ComponentItemCode, @ComponentDescription, @Quantity, @UnitOfMeasure,
-                         @Reference, @Notes, @Category, @Type, @UnitCost, @ExtendedCost,
-                         @ItemExists, @ItemType, @ValidationMessage, @CreatedDate, @ModifiedDate)";
+                         @ItemExists, @ValidationMessage,
+                         @ProductLine, @ProductType, @ProcurementType, @SubProductFamily, @StagedItem, @Coated, @GoldenStandard,
+                         @CreatedDate, @ModifiedDate)";
 
                     using var command = new SqlCommand(sql, connection, transaction);
                     AddBillParameters(command, bill);
@@ -239,15 +243,15 @@ public class BomImportBillRepository : IBomImportBillRepository
                 ComponentDescription = @ComponentDescription,
                 Quantity = @Quantity,
                 UnitOfMeasure = @UnitOfMeasure,
-                Reference = @Reference,
-                Notes = @Notes,
-                Category = @Category,
-                Type = @Type,
-                UnitCost = @UnitCost,
-                ExtendedCost = @ExtendedCost,
                 ItemExists = @ItemExists,
-                ItemType = @ItemType,
                 ValidationMessage = @ValidationMessage,
+                ProductLine = @ProductLine,
+                ProductType = @ProductType,
+                ProcurementType = @ProcurementType,
+                SubProductFamily = @SubProductFamily,
+                StagedItem = @StagedItem,
+                Coated = @Coated,
+                GoldenStandard = @GoldenStandard,
                 ModifiedDate = @ModifiedDate
             WHERE Id = @Id";
 
@@ -311,7 +315,6 @@ public class BomImportBillRepository : IBomImportBillRepository
         const string sql = @"
             UPDATE isBOMImportBills
             SET ItemExists = @ItemExists,
-                ItemType = @ItemType,
                 ValidationMessage = @ValidationMessage,
                 ModifiedDate = @ModifiedDate
             WHERE Id = @Id";
@@ -324,7 +327,6 @@ public class BomImportBillRepository : IBomImportBillRepository
             using var command = new SqlCommand(sql, connection);
             command.Parameters.AddWithValue("@Id", id);
             command.Parameters.AddWithValue("@ItemExists", itemExists);
-            command.Parameters.AddWithValue("@ItemType", (object?)itemType ?? DBNull.Value);
             command.Parameters.AddWithValue("@ValidationMessage", (object?)validationMessage ?? DBNull.Value);
             command.Parameters.AddWithValue("@ModifiedDate", DateTime.Now);
 
@@ -377,52 +379,21 @@ public class BomImportBillRepository : IBomImportBillRepository
 
     public async Task<int> GetValidatedParentItemCountAsync()
     {
-        _logger.LogDebug("Getting validated parent item count (fully validated BOMs only - including nested parent items)");
+        _logger.LogDebug("Getting validated parent item count (parents with ALL components validated)");
 
         const string sql = @"
-            SELECT COUNT(DISTINCT ItemCode)
-            FROM (
-                -- Parent items where ALL components are Validated
-                -- AND if the parent itself is a component elsewhere, it must also be validated
-                SELECT DISTINCT ParentItemCode AS ItemCode
-                FROM isBOMImportBills
-                WHERE ParentItemCode IS NOT NULL
-                  -- Parent exists in CI_Item
-                  AND ParentItemCode IN (
-                      SELECT ItemCode FROM CI_Item
-                  )
-                  -- All components of this parent are validated
-                  AND ParentItemCode NOT IN (
-                      SELECT DISTINCT ParentItemCode
-                      FROM isBOMImportBills
-                      WHERE ParentItemCode IS NOT NULL
-                        AND Status != 'Validated'
-                  )
-                  -- If this parent is used as a component elsewhere, it must be validated
-                  AND (
-                      -- Either the parent is NOT used as a component anywhere
-                      ParentItemCode NOT IN (
-                          SELECT DISTINCT ComponentItemCode
-                          FROM isBOMImportBills
-                          WHERE ComponentItemCode IS NOT NULL
-                      )
-                      -- OR if it IS used as a component, it must be validated
-                      OR ParentItemCode IN (
-                          SELECT DISTINCT ComponentItemCode
-                          FROM isBOMImportBills
-                          WHERE ComponentItemCode IS NOT NULL
-                            AND Status = 'Validated'
-                      )
-                  )
-                
-                UNION
-                
-                -- Standalone parent items with Validated status
-                SELECT DISTINCT ComponentItemCode AS ItemCode
-                FROM isBOMImportBills
-                WHERE Status = 'Validated'
-                  AND ParentItemCode IS NULL
-            ) AS AllParents";
+            -- Count distinct parent items where parent is validated and ALL components are validated
+            SELECT COUNT(DISTINCT ib.ComponentItemCode)
+            FROM isBOMImportBills ib
+            WHERE ib.ParentItemCode IS NULL
+              AND ib.Status = 'Validated'
+              -- Check that ALL components for this parent are validated
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM isBOMImportBills components
+                  WHERE components.ParentItemCode = ib.ComponentItemCode
+                    AND components.Status != 'Validated'
+              )";
 
         try
         {
@@ -653,40 +624,42 @@ public class BomImportBillRepository : IBomImportBillRepository
 
     public async Task<int> GetReadyToIntegrateRecordCountAsync()
     {
-        _logger.LogDebug("Getting ready to integrate record count (only records where parent and all components are fully validated)");
+        _logger.LogDebug("Getting ready to integrate record count (parents + components where ALL are validated)");
 
         const string sql = @"
+            -- Count all records (parent + components) for fully validated BOMs
             SELECT COUNT(*)
             FROM isBOMImportBills ib
-            WHERE ib.Status = 'Validated'
-              AND ib.ParentItemCode IS NOT NULL
-              -- Parent exists in CI_Item
-              AND ib.ParentItemCode IN (
-                  SELECT ItemCode FROM CI_Item
-              )
-              -- All components of this parent are validated
-              AND ib.ParentItemCode NOT IN (
-                  SELECT DISTINCT ParentItemCode
-                  FROM isBOMImportBills
-                  WHERE ParentItemCode IS NOT NULL
-                    AND Status != 'Validated'
-              )
-              -- If this parent is used as a component elsewhere, it must be validated
-              AND (
-                  -- Either the parent is NOT used as a component anywhere
-                  ib.ParentItemCode NOT IN (
-                      SELECT DISTINCT ComponentItemCode
-                      FROM isBOMImportBills
-                      WHERE ComponentItemCode IS NOT NULL
-                  )
-                  -- OR if it IS used as a component, it must be validated
-                  OR ib.ParentItemCode IN (
-                      SELECT DISTINCT ComponentItemCode
-                      FROM isBOMImportBills
-                      WHERE ComponentItemCode IS NOT NULL
-                        AND Status = 'Validated'
-                  )
-              )";
+            WHERE 
+                -- Case 1: Parent item itself (has no ParentItemCode and is validated)
+                (ib.ParentItemCode IS NULL AND ib.Status = 'Validated'
+                 -- Check if ALL components for this parent are validated
+                 AND NOT EXISTS (
+                     SELECT 1
+                     FROM isBOMImportBills components
+                     WHERE components.ParentItemCode = ib.ComponentItemCode
+                       AND components.Status != 'Validated'
+                 )
+                )
+                OR
+                -- Case 2: Component items of validated parents
+                (ib.ParentItemCode IS NOT NULL AND ib.Status = 'Validated'
+                 -- Parent must be validated
+                 AND EXISTS (
+                     SELECT 1
+                     FROM isBOMImportBills parent
+                     WHERE parent.ComponentItemCode = ib.ParentItemCode
+                       AND parent.ParentItemCode IS NULL
+                       AND parent.Status = 'Validated'
+                 )
+                 -- ALL siblings (other components of same parent) must be validated
+                 AND NOT EXISTS (
+                     SELECT 1
+                     FROM isBOMImportBills siblings
+                     WHERE siblings.ParentItemCode = ib.ParentItemCode
+                       AND siblings.Status != 'Validated'
+                 )
+                )";
 
         try
         {
@@ -723,15 +696,15 @@ public class BomImportBillRepository : IBomImportBillRepository
         command.Parameters.AddWithValue("@ComponentDescription", (object?)bill.ComponentDescription ?? DBNull.Value);
         command.Parameters.AddWithValue("@Quantity", bill.Quantity);
         command.Parameters.AddWithValue("@UnitOfMeasure", (object?)bill.UnitOfMeasure ?? DBNull.Value);
-        command.Parameters.AddWithValue("@Reference", (object?)bill.Reference ?? DBNull.Value);
-        command.Parameters.AddWithValue("@Notes", (object?)bill.Notes ?? DBNull.Value);
-        command.Parameters.AddWithValue("@Category", (object?)bill.Category ?? DBNull.Value);
-        command.Parameters.AddWithValue("@Type", (object?)bill.Type ?? DBNull.Value);
-        command.Parameters.AddWithValue("@UnitCost", (object?)bill.UnitCost ?? DBNull.Value);
-        command.Parameters.AddWithValue("@ExtendedCost", (object?)bill.ExtendedCost ?? DBNull.Value);
         command.Parameters.AddWithValue("@ItemExists", bill.ItemExists);
-        command.Parameters.AddWithValue("@ItemType", (object?)bill.ItemType ?? DBNull.Value);
         command.Parameters.AddWithValue("@ValidationMessage", (object?)bill.ValidationMessage ?? DBNull.Value);
+        command.Parameters.AddWithValue("@ProductLine", (object?)bill.ProductLine ?? DBNull.Value);
+        command.Parameters.AddWithValue("@ProductType", (object?)bill.ProductType ?? DBNull.Value);
+        command.Parameters.AddWithValue("@ProcurementType", (object?)bill.ProcurementType ?? DBNull.Value);
+        command.Parameters.AddWithValue("@SubProductFamily", (object?)bill.SubProductFamily ?? DBNull.Value);
+        command.Parameters.AddWithValue("@StagedItem", (object?)bill.StagedItem ?? DBNull.Value);
+        command.Parameters.AddWithValue("@Coated", (object?)bill.Coated ?? DBNull.Value);
+        command.Parameters.AddWithValue("@GoldenStandard", (object?)bill.GoldenStandard ?? DBNull.Value);
         command.Parameters.AddWithValue("@CreatedDate", bill.CreatedDate == default ? DateTime.Now : bill.CreatedDate);
         command.Parameters.AddWithValue("@ModifiedDate", DateTime.Now);
     }
@@ -784,15 +757,15 @@ public class BomImportBillRepository : IBomImportBillRepository
             ComponentDescription = reader.IsDBNull(reader.GetOrdinal("ComponentDescription")) ? null : reader.GetString(reader.GetOrdinal("ComponentDescription")),
             Quantity = reader.GetDecimal(reader.GetOrdinal("Quantity")),
             UnitOfMeasure = reader.IsDBNull(reader.GetOrdinal("UnitOfMeasure")) ? null : reader.GetString(reader.GetOrdinal("UnitOfMeasure")),
-            Reference = reader.IsDBNull(reader.GetOrdinal("Reference")) ? null : reader.GetString(reader.GetOrdinal("Reference")),
-            Notes = reader.IsDBNull(reader.GetOrdinal("Notes")) ? null : reader.GetString(reader.GetOrdinal("Notes")),
-            Category = reader.IsDBNull(reader.GetOrdinal("Category")) ? null : reader.GetString(reader.GetOrdinal("Category")),
-            Type = reader.IsDBNull(reader.GetOrdinal("Type")) ? null : reader.GetString(reader.GetOrdinal("Type")),
-            UnitCost = reader.IsDBNull(reader.GetOrdinal("UnitCost")) ? null : reader.GetDecimal(reader.GetOrdinal("UnitCost")),
-            ExtendedCost = reader.IsDBNull(reader.GetOrdinal("ExtendedCost")) ? null : reader.GetDecimal(reader.GetOrdinal("ExtendedCost")),
             ItemExists = reader.GetBoolean(reader.GetOrdinal("ItemExists")),
-            ItemType = reader.IsDBNull(reader.GetOrdinal("ItemType")) ? null : reader.GetString(reader.GetOrdinal("ItemType")),
             ValidationMessage = reader.IsDBNull(reader.GetOrdinal("ValidationMessage")) ? null : reader.GetString(reader.GetOrdinal("ValidationMessage")),
+            ProductLine = reader.IsDBNull(reader.GetOrdinal("ProductLine")) ? null : reader.GetString(reader.GetOrdinal("ProductLine")),
+            ProductType = reader.IsDBNull(reader.GetOrdinal("ProductType")) ? null : reader.GetString(reader.GetOrdinal("ProductType")),
+            ProcurementType = reader.IsDBNull(reader.GetOrdinal("ProcurementType")) ? null : reader.GetString(reader.GetOrdinal("ProcurementType")),
+            SubProductFamily = reader.IsDBNull(reader.GetOrdinal("SubProductFamily")) ? null : reader.GetString(reader.GetOrdinal("SubProductFamily")),
+            StagedItem = reader.IsDBNull(reader.GetOrdinal("StagedItem")) ? null : reader.GetBoolean(reader.GetOrdinal("StagedItem")),
+            Coated = reader.IsDBNull(reader.GetOrdinal("Coated")) ? null : reader.GetBoolean(reader.GetOrdinal("Coated")),
+            GoldenStandard = reader.IsDBNull(reader.GetOrdinal("GoldenStandard")) ? null : reader.GetBoolean(reader.GetOrdinal("GoldenStandard")),
             CreatedDate = reader.GetDateTime(reader.GetOrdinal("CreatedDate")),
             ModifiedDate = reader.GetDateTime(reader.GetOrdinal("ModifiedDate"))
         };
