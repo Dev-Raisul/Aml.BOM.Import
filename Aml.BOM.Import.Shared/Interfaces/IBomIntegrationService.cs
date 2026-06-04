@@ -6,5 +6,6 @@ public interface IBomIntegrationService
     Task<bool> IntegrateBomByParentAsync(string parentItemCode);
     Task<bool> IntegrateNewItemsAsync(IEnumerable<object> items);
     Task<object> GetIntegrationStatusAsync(int bomImportRecordId);
+    Task<(int successCount, int failedCount, List<string> errors)> IntegrateBatchBomsAsync(IEnumerable<string> parentItemCodes);
 }
 

@@ -157,6 +157,14 @@ public class FileImportService : IFileImportService
     {
         var bills = new List<BomImportBill>();
 
+        // Check if this is a Phantom tab (case-insensitive)
+        var isPhantomTab = tabName.Trim().Equals("Phantom", StringComparison.OrdinalIgnoreCase);
+        
+        if (isPhantomTab)
+        {
+            _logger.LogInformation("Processing Phantom tab - parent items will be set to ProductType 'P'");
+        }
+
         // Find the header row (assuming row 1 contains headers)
         var headerRow = worksheet.Row(1);
         
@@ -222,6 +230,14 @@ public class FileImportService : IFileImportService
                     CreatedDate = DateTime.Now,
                     ModifiedDate = DateTime.Now
                 };
+
+                // Special handling for Phantom tab
+                // If tab is "Phantom" and item has no parent (is a parent item), set ProductType to 'P'
+                if (isPhantomTab && string.IsNullOrWhiteSpace(bill.ParentItemCode))
+                {
+                    bill.ProductType = "P";
+                    _logger.LogDebug("Set ProductType='P' for parent item {0} in Phantom tab", bill.ComponentItemCode);
+                }
 
                 // Only add if component item code is not empty
                 if (!string.IsNullOrWhiteSpace(bill.ComponentItemCode))

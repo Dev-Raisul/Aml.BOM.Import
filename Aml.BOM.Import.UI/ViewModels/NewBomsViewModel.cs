@@ -336,42 +336,15 @@ public partial class NewBomsViewModel : ObservableObject
                 .Where(b => b.ParentItemCode == null) // Only parent items
                 .ToList();
 
-            int successCount = 0;
-            int failedCount = 0;
-            var errors = new List<string>();
+            // Extract parent item codes for batch integration
+            var parentItemCodes = parentBoms.Select(p => p.ComponentItemCode).ToList();
 
-            foreach (var parent in parentBoms)
-            {
-                try
-                {
-                    var parentItemCode = parent.ComponentItemCode;
-                    
-                    _logger.LogInformation("Integrating BOM for parent: {0}", parentItemCode);
-                    
-                    // Integrate the BOM by parent item code
-                    // This will verify all components are Ready before integration
-                    bool success = await _bomIntegrationService.IntegrateBomByParentAsync(parentItemCode);
-                    
-                    if (success)
-                    {
-                        successCount++;
-                        _logger.LogInformation("BOM integrated successfully: {0}", parentItemCode);
-                    }
-                    else
-                    {
-                        failedCount++;
-                        errors.Add($"{parentItemCode}: Integration failed");
-                        _logger.LogWarning("BOM integration failed: {0}", parentItemCode);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    failedCount++;
-                    var parentItem = parent.ComponentItemCode ?? "Unknown";
-                    errors.Add($"{parentItem}: {ex.Message}");
-                    _logger.LogError($"Failed to integrate BOM for parent {parentItem}", ex);
-                }
-            }
+            _logger.LogInformation("Starting batch integration of {0} BOMs", parentItemCodes.Count);
+
+            // Use batch integration with shared Sage session
+            var (successCount, failedCount, errors) = await _bomIntegrationService.IntegrateBatchBomsAsync(parentItemCodes);
+
+            _logger.LogInformation("Batch integration complete: {0} succeeded, {1} failed", successCount, failedCount);
 
             // Reload BOMs to reflect updated statuses
             await LoadBoms();
