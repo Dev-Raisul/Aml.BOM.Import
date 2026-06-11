@@ -33,6 +33,9 @@ public partial class LogsViewModel : ObservableObject
     [ObservableProperty]
     private bool _isLoading;
 
+    [ObservableProperty]
+    private string _loadingMessage = "Loading...";
+
     private bool _autoRefresh;
     public bool AutoRefresh
     {
@@ -62,6 +65,7 @@ public partial class LogsViewModel : ObservableObject
     private async Task LoadLogFiles()
     {
         IsLoading = true;
+        LoadingMessage = "Loading log files...";
         try
         {
             LogDirectory = _logger.GetLogDirectory();

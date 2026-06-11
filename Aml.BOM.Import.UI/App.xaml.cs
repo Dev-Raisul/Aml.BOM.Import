@@ -47,6 +47,9 @@ public partial class App : System.Windows.Application
                 services.AddSingleton<IBomImportBillRepository>(sp => 
                     new BomImportBillRepository(GetConnectionString(), sp.GetRequiredService<ILoggerService>()));
 
+                // Register shared Sage session (singleton - stays alive for application lifetime)
+                services.AddSingleton<SharedSageSessionService>();
+
                 // Register services
                 services.AddSingleton<IDatabaseConnectionService, DatabaseConnectionService>();
                 services.AddSingleton<IFileImportService>(sp => 
@@ -67,7 +70,8 @@ public partial class App : System.Windows.Application
                         sp.GetRequiredService<INewMakeItemRepository>(),
                         sp.GetRequiredService<IBomImportBillRepository>(),
                         sp.GetRequiredService<ISettingsService>(),
-                        sp.GetRequiredService<ILoggerService>()));
+                        sp.GetRequiredService<ILoggerService>(),
+                        sp.GetRequiredService<SharedSageSessionService>()));
                 services.AddSingleton<ISettingsService, SettingsService>();
 
                 // Register application services
@@ -154,6 +158,19 @@ public partial class App : System.Windows.Application
         var logger = _host.Services.GetRequiredService<ILoggerService>();
         logger.LogInformation("=== Application Shutting Down ===");
         logger.LogInformation("Exit Code: {0}", e.ApplicationExitCode);
+        
+        // Dispose shared Sage session
+        try
+        {
+            var sharedSession = _host.Services.GetRequiredService<SharedSageSessionService>();
+            logger.LogInformation("Disposing shared Sage session...");
+            sharedSession.Dispose();
+            logger.LogInformation("Shared Sage session disposed successfully");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("Error disposing shared Sage session: {0}", ex.Message);
+        }
         
         using (_host)
         {

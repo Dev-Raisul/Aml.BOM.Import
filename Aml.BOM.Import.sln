@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aml.BOM.Import.UI", "Aml.BO
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aml.BOM.Import.Tests", "Aml.BOM.Import.Tests\Aml.BOM.Import.Tests.csproj", "{7F426CEB-121E-4DA6-BDFB-4037685AD437}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Aml.BOM.Import.Setup", "Aml.BOM.Import.Setup\Aml.BOM.Import.Setup.vdproj", "{F91DC6EE-7C29-8E1D-C405-538D9EFB357D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -97,8 +99,17 @@ Global
 		{7F426CEB-121E-4DA6-BDFB-4037685AD437}.Release|x64.Build.0 = Release|Any CPU
 		{7F426CEB-121E-4DA6-BDFB-4037685AD437}.Release|x86.ActiveCfg = Release|Any CPU
 		{7F426CEB-121E-4DA6-BDFB-4037685AD437}.Release|x86.Build.0 = Release|Any CPU
+		{F91DC6EE-7C29-8E1D-C405-538D9EFB357D}.Debug|Any CPU.ActiveCfg = Debug
+		{F91DC6EE-7C29-8E1D-C405-538D9EFB357D}.Debug|x64.ActiveCfg = Debug
+		{F91DC6EE-7C29-8E1D-C405-538D9EFB357D}.Debug|x86.ActiveCfg = Debug
+		{F91DC6EE-7C29-8E1D-C405-538D9EFB357D}.Release|Any CPU.ActiveCfg = Release
+		{F91DC6EE-7C29-8E1D-C405-538D9EFB357D}.Release|x64.ActiveCfg = Release
+		{F91DC6EE-7C29-8E1D-C405-538D9EFB357D}.Release|x86.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1812AB56-0937-454F-906B-C2A3DA09091F}
 	EndGlobalSection
 EndGlobal

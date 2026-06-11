@@ -295,7 +295,23 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
             </DataGrid.Columns>
-            
+
+            <!-- Row Style for highlighting -->
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#E3F2FD"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#BBDEFB"/>
+                            <Setter Property="BorderBrush" Value="#2196F3"/>
+                            <Setter Property="BorderThickness" Value="2"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
+
             <!-- Empty State -->
             <DataGrid.Style>
                 <Style TargetType="DataGrid">
@@ -347,7 +363,7 @@
                Background="#80000000" 
                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="Loading..." 
+                <TextBlock Text="{Binding LoadingMessage}" 
                           FontSize="20" 
                           Foreground="White" 
                           HorizontalAlignment="Center" 

@@ -27,6 +27,9 @@ public partial class NewBomsViewModel : ObservableObject
     private bool _isLoading;
 
     [ObservableProperty]
+    private string _loadingMessage = "Loading...";
+
+    [ObservableProperty]
     private int _totalPendingBoms;
 
     [ObservableProperty]
@@ -98,8 +101,9 @@ public partial class NewBomsViewModel : ObservableObject
     private async Task LoadBoms()
     {
         IsLoading = true;
+        LoadingMessage = "Loading BOMs...";
         StatusMessage = "Loading BOMs...";
-        
+
         try
         {
             // Load BOM data
@@ -135,14 +139,12 @@ public partial class NewBomsViewModel : ObservableObject
             TotalValidatedRecords = statusSummary.ContainsKey("Validated") ? statusSummary["Validated"] : 0;
             
             NewMakeItemsCount = statusSummary.ContainsKey("NewMakeItem") ? statusSummary["NewMakeItem"] : 0;
-            NewBuyItemsCount = statusSummary.ContainsKey("NewBuyItem") ? statusSummary["NewBuyItem"] : 0;
+            NewBuyItemsCount = await _bomBillRepository.GetDistinctBuyItemCountAsync();
             DuplicateBomsCount = statusSummary.ContainsKey("Duplicate") ? statusSummary["Duplicate"] : 0;
             FailedBomsCount = statusSummary.ContainsKey("Failed") ? statusSummary["Failed"] : 0;
 
             // Calculate total pending (exclude Integrated, Duplicate, and Ready)
-            TotalPendingBoms = statusSummary
-                .Where(kvp => kvp.Key != "Integrated" && kvp.Key != "Duplicate" && kvp.Key != "Ready")
-                .Sum(kvp => kvp.Value);
+            TotalPendingBoms = await _bomBillRepository.GetTotalPendingRecordCountAsync();
 
             // Get parent item counts for each status
             NewMakeItemsParentCount = await _bomBillRepository.GetParentItemCountByStatusAsync("NewMakeItem");
@@ -174,8 +176,9 @@ public partial class NewBomsViewModel : ObservableObject
         if (openFileDialog.ShowDialog() == true)
         {
             IsLoading = true;
+            LoadingMessage = "Importing file...";
             StatusMessage = "Importing file...";
-            
+
             try
             {
                 var request = new ImportFileRequest
@@ -237,8 +240,9 @@ public partial class NewBomsViewModel : ObservableObject
     private async Task RevalidateAll()
     {
         IsLoading = true;
+        LoadingMessage = "Re-validating all pending BOMs...";
         StatusMessage = "Re-validating all pending BOMs...";
-        
+
         try
         {
             var result = await _validationService.RevalidateAllPendingAsync();
@@ -291,8 +295,9 @@ public partial class NewBomsViewModel : ObservableObject
     private async Task IntegrateBoms()
     {
         IsLoading = true;
+        LoadingMessage = "Preparing BOMs for integration...";
         StatusMessage = "Preparing BOMs for integration...";
-        
+
         try
         {
             // Get count of BOMs ready to integrate (Ready status)
@@ -328,8 +333,9 @@ public partial class NewBomsViewModel : ObservableObject
                 return;
             }
 
+            LoadingMessage = "Integrating BOMs into Sage 100...";
             StatusMessage = "Integrating BOMs into Sage 100...";
-            
+
             // Get all Ready parent BOM records
             var readyBills = await _bomBillRepository.GetByStatusAsync("Ready");
             var parentBoms = readyBills

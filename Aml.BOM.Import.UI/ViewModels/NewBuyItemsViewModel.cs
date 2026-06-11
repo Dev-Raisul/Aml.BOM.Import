@@ -24,6 +24,9 @@ public partial class NewBuyItemsViewModel : ObservableObject
     private bool _isLoading;
 
     [ObservableProperty]
+    private string _loadingMessage = "Loading...";
+
+    [ObservableProperty]
     private int _totalItems;
 
     [ObservableProperty]
@@ -39,12 +42,15 @@ public partial class NewBuyItemsViewModel : ObservableObject
     private async Task LoadItems()
     {
         IsLoading = true;
+        LoadingMessage = "Loading new buy items...";
         StatusMessage = "Loading new buy items...";
-        
+
         try
         {
             var items = await _newItemService.GetNewBuyItemsAsync();
-            
+
+            LoadingMessage = "Populating buy items grid...";
+            StatusMessage = "Populating buy items grid...";
             Items = new ObservableCollection<NewBuyItem>(items);
             TotalItems = Items.Count;
             StatusMessage = $"Loaded {TotalItems} new buy item(s)";

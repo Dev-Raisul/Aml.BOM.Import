@@ -129,7 +129,7 @@ public partial class SettingsViewModel : ObservableObject
     private async Task SaveSettings()
     {
         IsSaving = true;
-        StatusMessage = string.Empty;
+        StatusMessage = "Saving settings...";
 
         try
         {
@@ -203,7 +203,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task TestConnection()
     {
-        StatusMessage = "Testing connection...";
+        StatusMessage = "Testing database connection...";
         
         try
         {

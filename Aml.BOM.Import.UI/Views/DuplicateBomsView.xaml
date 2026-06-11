@@ -172,11 +172,13 @@
                 <Style TargetType="DataGridRow">
                     <Setter Property="Background" Value="#FFEBEE"/>
                     <Style.Triggers>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#FFCDD2"/>
-                        </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" Value="#FFCDD2"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#EF9A9A"/>
+                            <Setter Property="BorderBrush" Value="#F44336"/>
+                            <Setter Property="BorderThickness" Value="2"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
@@ -199,7 +201,7 @@
                Background="#80000000" 
                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="Loading..." 
+                <TextBlock Text="{Binding LoadingMessage}" 
                           FontSize="20" 
                           Foreground="White" 
                           HorizontalAlignment="Center" 

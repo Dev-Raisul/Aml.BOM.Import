@@ -16,6 +16,7 @@ public class SageSessionService : IDisposable
     private dynamic? _session;
     private bool _disposed;
     private bool _isInitialized;
+    private string _currentModule = "I/M"; // Track current module
 
     public SageSessionService(SageSettings settings, ILoggerService logger)
     {
@@ -52,7 +53,8 @@ public class SageSessionService : IDisposable
     /// <summary>
     /// Initializes the Sage 100 session following the exact VBS script sequence
     /// </summary>
-    public void InitializeSession()
+    /// <param name="module">The Sage module to initialize (I/M for Items, B/M for BOMs). Default is I/M.</param>
+    public void InitializeSession(string module = "I/M")
     {
         if (_isInitialized)
         {
@@ -139,8 +141,8 @@ public class SageSessionService : IDisposable
 
             // STEP 6: Set Date (format: YYYYMMDD)
             string today = DateTime.Today.ToString("yyyyMMdd");
-            _logger.LogInformation("[STEP 6] Setting date for I/M module: {0}", today);
-            retVal = _session.nSetDate("I/M", today);
+            _logger.LogInformation("[STEP 6] Setting date for {0} module: {1}", module, today);
+            retVal = _session.nSetDate(module, today);
             if (retVal == 0)
             {
                 string errorMsg = _session.sLastErrorMsg ?? "Unknown error";
@@ -149,8 +151,8 @@ public class SageSessionService : IDisposable
             _logger.LogInformation("[STEP 6] Date set successfully (retVal={0})", retVal);
 
             // STEP 7: Set Module
-            _logger.LogInformation("[STEP 7] Setting module: I/M");
-            retVal = _session.nSetModule("I/M");
+            _logger.LogInformation("[STEP 7] Setting module: {0}", module);
+            retVal = _session.nSetModule(module);
             if (retVal == 0)
             {
                 string errorMsg = _session.sLastErrorMsg ?? "Unknown error";
@@ -158,13 +160,61 @@ public class SageSessionService : IDisposable
             }
             _logger.LogInformation("[STEP 7] Module set successfully (retVal={0})", retVal);
 
+            _currentModule = module;
+
             _isInitialized = true;
-            _logger.LogInformation("=== Sage 100 Session Initialized Successfully ===");
+            _logger.LogInformation("=== Sage 100 Session Initialized Successfully (Module: {0}) ===", module);
         }
         catch (Exception ex)
         {
             _logger.LogError("Failed to initialize Sage session", ex);
             Cleanup();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Switches the current module if different from the target module
+    /// </summary>
+    /// <param name="module">Target module (I/M or B/M)</param>
+    public void SwitchModule(string module)
+    {
+        if (!_isInitialized)
+            throw new InvalidOperationException("Session must be initialized before switching modules.");
+
+        if (_currentModule == module)
+        {
+            _logger.LogDebug("Already on module {0}, no switch needed", module);
+            return;
+        }
+
+        _logger.LogInformation("Switching module from {0} to {1}", _currentModule, module);
+
+        try
+        {
+            // Set Date for the new module
+            string today = DateTime.Today.ToString("yyyyMMdd");
+            int retVal = _session.nSetDate(module, today);
+            if (retVal == 0)
+            {
+                string errorMsg = _session.sLastErrorMsg ?? "Unknown error";
+                throw new InvalidOperationException($"nSetDate failed for module {module}: {errorMsg}");
+            }
+
+            // Set the new module
+            retVal = _session.nSetModule(module);
+            if (retVal == 0)
+            {
+                string errorMsg = _session.sLastErrorMsg ?? "Unknown error";
+                throw new InvalidOperationException($"nSetModule failed: {errorMsg}");
+            }
+
+            _currentModule = module;
+            _logger.LogInformation("Successfully switched to module: {0}", module);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to switch module to {0}", ex, module);
             throw;
         }
     }

@@ -253,7 +253,7 @@ d:DesignHeight="600" d:DesignWidth="900">
                         </EventTrigger>
                     </iconPacks:PackIconMaterial.Triggers>
                 </iconPacks:PackIconMaterial>
-                <TextBlock Text="Loading logs..." 
+                <TextBlock Text="{Binding LoadingMessage}" 
                           FontSize="16" 
                           Foreground="White" 
                           Margin="0,10,0,0"

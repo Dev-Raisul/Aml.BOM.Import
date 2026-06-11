@@ -532,6 +532,45 @@ public class BomImportBillRepository : IBomImportBillRepository
         }
     }
 
+    public async Task<int> GetDistinctBuyItemCountAsync()
+    {
+        _logger.LogDebug("Getting distinct buy item count (distinct components + distinct parents with NewBuyItem status)");
+
+        const string sql = @"
+            SELECT COUNT(DISTINCT ItemCode)
+            FROM (
+                -- Distinct component items with NewBuyItem status
+                SELECT DISTINCT ComponentItemCode AS ItemCode
+                FROM isBOMImportBills
+                WHERE Status = 'NewBuyItem'
+                  AND ComponentItemCode IS NOT NULL
+                
+                UNION
+                
+                -- Distinct parent items with NewBuyItem status (standalone parents)
+                SELECT DISTINCT ComponentItemCode AS ItemCode
+                FROM isBOMImportBills
+                WHERE Status = 'NewBuyItem'
+                  AND ParentItemCode IS NULL
+                  AND ComponentItemCode IS NOT NULL
+            ) AS AllBuyItems";
+
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using var command = new SqlCommand(sql, connection);
+
+            return (int)(await command.ExecuteScalarAsync() ?? 0);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to get distinct buy item count", ex);
+            throw;
+        }
+    }
+
     public async Task<int> GetCountByFileNameAsync(string fileName)
     {
         const string sql = "SELECT COUNT(*) FROM isBOMImportBills WHERE ImportFileName = @FileName";
@@ -709,6 +748,31 @@ public class BomImportBillRepository : IBomImportBillRepository
         catch (Exception ex)
         {
             _logger.LogError("Failed to get ready to integrate record count", ex);
+            throw;
+        }
+    }
+
+    public async Task<int> GetTotalPendingRecordCountAsync()
+    {
+        _logger.LogDebug("Getting total pending record count (all records not Ready, not Integrated, not Duplicate)");
+
+        const string sql = @"
+            SELECT COUNT(*)
+            FROM isBOMImportBills
+            WHERE Status NOT IN ('Ready', 'Integrated', 'Duplicate')";
+
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using var command = new SqlCommand(sql, connection);
+
+            return (int)(await command.ExecuteScalarAsync() ?? 0);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Failed to get total pending record count", ex);
             throw;
         }
     }

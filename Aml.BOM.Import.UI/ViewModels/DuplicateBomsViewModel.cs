@@ -22,6 +22,9 @@ public partial class DuplicateBomsViewModel : ObservableObject
     private bool _isLoading;
 
     [ObservableProperty]
+    private string _loadingMessage = "Loading...";
+
+    [ObservableProperty]
     private int _totalDuplicateBoms;
 
     [ObservableProperty]
@@ -51,17 +54,22 @@ public partial class DuplicateBomsViewModel : ObservableObject
     private async Task LoadBoms()
     {
         IsLoading = true;
+        LoadingMessage = "Loading duplicate BOMs...";
         StatusMessage = "Loading duplicate BOMs...";
-        
+
         try
         {
             // Load only duplicate BOMs
             var duplicateBills = (await _bomBillRepository.GetByStatusAsync("Duplicate")).ToList();
             _allDuplicateBoms = duplicateBills;
-            
+
+            LoadingMessage = "Filtering duplicate BOMs...";
+            StatusMessage = "Filtering duplicate BOMs...";
             // Apply filter if search text exists
             ApplyFilter();
 
+            LoadingMessage = "Calculating statistics...";
+            StatusMessage = "Calculating statistics...";
             // Calculate statistics using the same logic as dashboard
             TotalDuplicateRecords = _allDuplicateBoms.Count;
             

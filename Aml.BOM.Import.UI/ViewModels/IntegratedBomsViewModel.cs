@@ -18,6 +18,9 @@ public partial class IntegratedBomsViewModel : ObservableObject
     [ObservableProperty]
     private bool _isLoading;
 
+    [ObservableProperty]
+    private string _loadingMessage = "Loading...";
+
     public IntegratedBomsViewModel(BomImportService bomImportService)
     {
         _bomImportService = bomImportService;
@@ -28,6 +31,7 @@ public partial class IntegratedBomsViewModel : ObservableObject
     private async Task LoadBoms()
     {
         IsLoading = true;
+        LoadingMessage = "Loading integrated BOMs...";
         try
         {
             // Get only integrated BOMs (Status = 'Integrated')

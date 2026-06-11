@@ -44,6 +44,9 @@ public partial class NewMakeItemsViewModel : ObservableObject
     private bool _isLoading;
 
     [ObservableProperty]
+    private string _loadingMessage = "Loading...";
+
+    [ObservableProperty]
     private string _statusMessage = "Ready";
 
     // Filter properties
@@ -100,19 +103,22 @@ public partial class NewMakeItemsViewModel : ObservableObject
     private async Task LoadItems()
     {
         IsLoading = true;
+        LoadingMessage = "Loading make items...";
         StatusMessage = "Loading make items...";
-        
+
         try
         {
             // Load all new make items from service
             var items = await _newItemService.GetNewMakeItemsAsync();
             _allItems = items.Cast<NewMakeItem>().ToList();
-            
+
+            LoadingMessage = "Applying filters...";
+            StatusMessage = "Applying filters...";
             // By default, show only non-integrated items (all new make items)
             // Apply filters will respect the ShowIntegratedItems checkbox
             ApplyFilters();
             UpdateStatistics();
-            
+
             StatusMessage = $"Loaded {TotalItems} new make items";
         }
         catch (Exception ex)
@@ -290,8 +296,9 @@ public partial class NewMakeItemsViewModel : ObservableObject
     private async Task CopyValueToFilteredItems(string columnName, object? value, bool onlyBlank)
     {
         IsLoading = true;
+        LoadingMessage = "Copying value to filtered items...";
         StatusMessage = $"Copying value to filtered items...";
-        
+
         try
         {
             int updatedCount = 0;
@@ -341,8 +348,9 @@ public partial class NewMakeItemsViewModel : ObservableObject
     private async Task CopyFromSageItemAsync(dynamic sageItem)
     {
         IsLoading = true;
+        LoadingMessage = "Copying data from Sage item...";
         StatusMessage = "Copying data from Sage item...";
-        
+
         try
         {
             int updatedCount = 0;
@@ -402,8 +410,9 @@ public partial class NewMakeItemsViewModel : ObservableObject
         if (result == MessageBoxResult.Yes)
         {
             IsLoading = true;
+            LoadingMessage = "Clearing all data...";
             StatusMessage = "Clearing all data...";
-            
+
             try
             {
                 foreach (var item in Items)
@@ -452,8 +461,9 @@ public partial class NewMakeItemsViewModel : ObservableObject
         if (result == MessageBoxResult.Yes)
         {
             IsLoading = true;
+            LoadingMessage = "Integrating items into Sage 100...";
             StatusMessage = "Integrating items into Sage 100...";
-            
+
             try
             {
                 // Pass the actual items with their current edited values (not IDs)
@@ -534,8 +544,9 @@ public partial class NewMakeItemsViewModel : ObservableObject
     public async Task CopyValueToAllFilteredItemsAsync(string columnHeader, object? value)
     {
         IsLoading = true;
+        LoadingMessage = $"Copying '{columnHeader}' value to all filtered items...";
         StatusMessage = $"Copying '{columnHeader}' value to all filtered items...";
-        
+
         try
         {
             int updatedCount = 0;

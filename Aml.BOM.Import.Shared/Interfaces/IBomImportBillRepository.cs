@@ -34,6 +34,7 @@ public interface IBomImportBillRepository
     
     // Statistics
     Task<int> GetCountByStatusAsync(string status);
+    Task<int> GetDistinctBuyItemCountAsync();
     Task<int> GetCountByFileNameAsync(string fileName);
     Task<Dictionary<string, int>> GetStatusSummaryAsync();
 
@@ -58,4 +59,10 @@ public interface IBomImportBillRepository
     /// Gets the count of validated records (rows) where parent exists and ALL components are validated
     /// </summary>
     Task<int> GetReadyToIntegrateRecordCountAsync();
+
+    /// <summary>
+    /// Gets the total count of all pending records (not Ready, not Integrated, not Duplicate)
+    /// This includes NewMakeItems, NewBuyItems, Validated, and any other non-terminal statuses
+    /// </summary>
+    Task<int> GetTotalPendingRecordCountAsync();
 }

@@ -253,6 +253,7 @@ d:DesignHeight="600" d:DesignWidth="1200">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Background" Value="#EEEEEE"/>
+                            <Setter Property="Foreground" Value="Black"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
@@ -264,6 +265,7 @@ d:DesignHeight="600" d:DesignWidth="1200">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="Background" Value="#EEEEEE"/>
+                            <Setter Property="Foreground" Value="Black"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
@@ -276,6 +278,7 @@ d:DesignHeight="600" d:DesignWidth="1200">
                         <Style TargetType="TextBlock">
                             <Setter Property="Background" Value="#EEEEEE"/>
                             <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Foreground" Value="Black"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
@@ -388,6 +391,13 @@ d:DesignHeight="600" d:DesignWidth="1200">
                         </DataTrigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" Value="#E3F2FD"/>
+                            <Setter Property="Foreground" Value="Black"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#BBDEFB"/>
+                            <Setter Property="BorderBrush" Value="#2196F3"/>
+                            <Setter Property="BorderThickness" Value="2"/>
+                            <Setter Property="Foreground" Value="Black"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
@@ -427,7 +437,7 @@ d:DesignHeight="600" d:DesignWidth="1200">
                Background="#80000000" 
                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="Loading..." 
+                <TextBlock Text="{Binding LoadingMessage}" 
                           FontSize="20" 
                           Foreground="White" 
                           HorizontalAlignment="Center" 

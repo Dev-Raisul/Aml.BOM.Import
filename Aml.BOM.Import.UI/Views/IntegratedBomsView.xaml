@@ -105,7 +105,23 @@ d:DesignHeight="450" d:DesignWidth="800">
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
             </DataGrid.Columns>
-            
+
+            <!-- Row Style for highlighting -->
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#E8F5E9"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#C8E6C9"/>
+                            <Setter Property="BorderBrush" Value="#4CAF50"/>
+                            <Setter Property="BorderThickness" Value="2"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
+
             <!-- Empty State -->
             <DataGrid.Style>
                 <Style TargetType="DataGrid">
@@ -146,11 +162,16 @@ d:DesignHeight="450" d:DesignWidth="800">
         <Border Grid.Row="0" Grid.RowSpan="2" 
                Background="#80000000" 
                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <TextBlock Text="Loading..." 
-                      FontSize="20" 
-                      Foreground="White" 
-                      HorizontalAlignment="Center" 
-                      VerticalAlignment="Center"/>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="{Binding LoadingMessage}" 
+                          FontSize="20" 
+                          Foreground="White" 
+                          HorizontalAlignment="Center" 
+                          Margin="0,0,0,10"/>
+                <ProgressBar IsIndeterminate="True" 
+                            Width="200" 
+                            Height="10"/>
+            </StackPanel>
         </Border>
     </Grid>
 </UserControl>

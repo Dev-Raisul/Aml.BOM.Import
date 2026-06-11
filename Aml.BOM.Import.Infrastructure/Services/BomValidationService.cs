@@ -31,14 +31,6 @@ public class BomValidationService : IBomValidationService
 
         var result = new ValidationResult { IsValid = true };
 
-        if(bill.ComponentItemCode == "PH-ACL-95.92-35-HV1" || bill.ComponentItemCode == "PH-DR-ACL-8FT-SO-DE" || bill.ComponentItemCode == "PH-UNV-JNR-END-1" || bill.ComponentItemCode == "PH-ACL5-ENDPLATES-XP-1") {
-            var a = 0;
-        }
-
-        if(bill.ParentItemCode== "292S82" || bill.ComponentItemCode== "292S82")
-        {
-            var a = 0;
-        }
         // Check if it's a duplicate BOM
         if (!string.IsNullOrWhiteSpace(bill.ParentItemCode))
         {
@@ -304,9 +296,10 @@ public class BomValidationService : IBomValidationService
 
     public async Task<ImportValidationResult> RevalidateAllPendingAsync()
     {
-        _logger.LogInformation("Re-validating all pending BOMs");
+        _logger.LogInformation("Re-validating all pending BOMs (excluding already integrated records)");
 
-        // Reset status of all non-duplicate bills back to "New" for re-validation
+        // Reset status of all non-duplicate, non-integrated bills back to "New" for re-validation
+        // Do NOT touch records with Status='Integrated' - they are already in Sage!
         var pendingStatuses = new[] { "Validated", "Ready", "Failed", "NewBuyItem", "NewMakeItem" };
         
         foreach (var status in pendingStatuses)
@@ -317,8 +310,11 @@ public class BomValidationService : IBomValidationService
             if (ids.Any())
             {
                 await _billRepository.UpdateBatchStatusAsync(ids, "New");
+                _logger.LogInformation("Reset {0} bills from Status='{1}' to 'New' for re-validation", ids.Count, status);
             }
         }
+
+        _logger.LogInformation("Skipped re-validation for records with Status='Integrated' or 'Duplicate' (already processed)");
 
         // Now validate all pending
         return await ValidateAllPendingAsync();
