@@ -71,7 +71,8 @@ public partial class App : System.Windows.Application
                         sp.GetRequiredService<IBomImportBillRepository>(),
                         sp.GetRequiredService<ISettingsService>(),
                         sp.GetRequiredService<ILoggerService>(),
-                        sp.GetRequiredService<SharedSageSessionService>()));
+                        sp.GetRequiredService<SharedSageSessionService>(),
+                        sp.GetRequiredService<IBomValidationService>()));
                 services.AddSingleton<ISettingsService, SettingsService>();
 
                 // Register application services

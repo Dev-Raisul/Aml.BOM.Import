@@ -12,19 +12,22 @@ public class BomIntegrationService : IBomIntegrationService
     private readonly ISettingsService _settingsService;
     private readonly ILoggerService _logger;
     private readonly SharedSageSessionService _sharedSession;
+    private readonly IBomValidationService _validationService;
 
     public BomIntegrationService(
         INewMakeItemRepository makeItemRepository,
         IBomImportBillRepository bomBillRepository,
         ISettingsService settingsService,
         ILoggerService logger,
-        SharedSageSessionService sharedSession)
+        SharedSageSessionService sharedSession,
+        IBomValidationService validationService)
     {
         _makeItemRepository = makeItemRepository;
         _bomBillRepository = bomBillRepository;
         _settingsService = settingsService;
         _logger = logger;
         _sharedSession = sharedSession;
+        _validationService = validationService;
     }
 
     /// <summary>
@@ -127,14 +130,31 @@ public class BomIntegrationService : IBomIntegrationService
                     _logger.LogInformation("Updating CI_Item UDF fields for {0} successfully integrated items", successCount);
                     var successfulItems = itemsList.Where(i => i.IsIntegrated).ToList();
                     await UpdateCIItemUDFFieldsBatchAsync(successfulItems, settings.DatabaseConnectionString);
-                    
+
                     // Mark newly created items as Validated in isBOMImportBills
                     _logger.LogInformation("Marking {0} newly created items as Validated in isBOMImportBills", successCount);
                     await MarkNewItemsAsValidatedAsync(successfulItems, settings.DatabaseConnectionString);
-                    
+
                     // Run Ready-to-Integrate check for affected BOMs
                     _logger.LogInformation("Running Ready-to-Integrate check for BOMs containing newly created items");
                     await UpdateReadyStatusForAffectedBomsAsync(successfulItems, settings.DatabaseConnectionString);
+
+                    // Auto-revalidate all pending BOMs now that new items exist in Sage
+                    _logger.LogInformation("Auto-revalidating all pending BOMs after new make items integration");
+                    try
+                    {
+                        var revalidationResult = await _validationService.RevalidateAllPendingAsync();
+                        _logger.LogInformation("Auto-revalidation complete: {0} validated, {1} new buy items, {2} new make items, {3} duplicates", 
+                            revalidationResult.ValidatedRecords, 
+                            revalidationResult.NewBuyItems, 
+                            revalidationResult.NewMakeItems,
+                            revalidationResult.DuplicateBoms);
+                    }
+                    catch (Exception revalidationEx)
+                    {
+                        // Don't fail the integration if revalidation fails - just log it
+                        _logger.LogError("Auto-revalidation failed after item integration", revalidationEx);
+                    }
                 }
 
                 return failedCount == 0;
@@ -787,14 +807,19 @@ public class BomIntegrationService : IBomIntegrationService
             // If parent is Phantom (ProductType = 'P'), set BillType to 'P', otherwise 'S' (Standard)
             string billType = "S"; // Default to Standard
             string parentProductType = parentRecord.ProductType?.Trim().ToUpper() ?? "";
-            
+
             if (parentProductType == "P")
             {
                 billType = "P"; // Phantom BOM
                 _logger.LogInformation("Parent item {0} is Phantom type - setting BillType to 'P'", parentItemCode);
             }
-            else
+            else if (parentProductType == "K")
             {
+                billType = "K"; // Kit BOM
+                _logger.LogInformation("Parent item {0} is Kit type - setting BillType to 'K'", parentItemCode);
+            }
+            else
+            { 
                 _logger.LogInformation("Parent item {0} is Standard type - setting BillType to 'S'", parentItemCode);
             }
 
@@ -1712,6 +1737,11 @@ public class BomIntegrationService : IBomIntegrationService
             {
                 billType = "P"; // Phantom BOM
                 _logger.LogInformation("Parent item {0} is Phantom type - setting BillType to 'P'", parentItemCode);
+            }
+            else if (parentProductType == "K")
+            {
+                billType = "K"; // Standard BOM
+                _logger.LogInformation("Parent item {0} is Kit type - setting BillType to 'K'", parentItemCode);
             }
             else
             {
