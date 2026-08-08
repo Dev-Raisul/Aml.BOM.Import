@@ -322,6 +322,15 @@ public class BomIntegrationService : IBomIntegrationService
                 _logger.LogWarning("Failed to set ItemType for {0}: {1}", item.ItemCode, errorMsg);
             }
 
+
+            retVal = itemBus.nSetValue("ProductType$", item.ProductType); // 1 = Regular
+            if (retVal == 0)
+            {
+                string errorMsg = itemBus.sLastErrorMsg ?? "Unknown error";
+                _logger.LogWarning("Failed to set ProductType for {0}: {1}", item.ItemCode, errorMsg);
+            }
+
+           
             retVal = itemBus.nSetValue("ProcurementType$", "M"); // M = Make
             if (retVal == 0)
             {

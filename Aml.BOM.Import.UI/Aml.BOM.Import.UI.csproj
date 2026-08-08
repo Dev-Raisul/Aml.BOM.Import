@@ -8,9 +8,9 @@
     <UseWPF>true</UseWPF>
 
     <!-- Assembly Information -->
-    <AssemblyVersion>1.0.4.0</AssemblyVersion>
-    <FileVersion>1.0.4.0</FileVersion>
-    <Version>1.0.4</Version>
+    <AssemblyVersion>1.0.7.0</AssemblyVersion>
+    <FileVersion>1.0.7.0</FileVersion>
+    <Version>1.0.7</Version>
     <Product>AML BOM Import</Product>
     <Company>AML Corporation</Company>
     <Copyright>2024 InfoSpring. All rights reserved.</Copyright>

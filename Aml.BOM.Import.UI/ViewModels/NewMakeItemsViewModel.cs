@@ -360,7 +360,7 @@ public partial class NewMakeItemsViewModel : ObservableObject
             {
                 // Copy properties (excluding description as per spec)
                 item.ProductLine = sageItem.ProductLine ?? string.Empty;
-                item.ProductType = sageItem.ProductType ?? "F";
+                //item.ProductType = sageItem.ProductType ?? "F";
                 item.Procurement = sageItem.Procurement ?? "M";
                 item.StandardUnitOfMeasure = sageItem.StandardUnitOfMeasure ?? "EACH";
                 item.SubProductFamily = sageItem.SubProductFamily ?? string.Empty;
