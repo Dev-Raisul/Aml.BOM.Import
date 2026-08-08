@@ -47,6 +47,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Total Pending -->
@@ -193,6 +194,28 @@
                              FontSize="11" 
                              Foreground="{StaticResource SecondaryTextBrush}"/>
                     </TextBlock>
+                </StackPanel>
+
+                <!-- Missing Phantom -->
+                <StackPanel Grid.Column="5" HorizontalAlignment="Center" 
+                            Cursor="Hand"
+                            Background="Transparent">
+                    <StackPanel.InputBindings>
+                        <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToPhantomBomsCommand}"/>
+                    </StackPanel.InputBindings>
+                    <TextBlock Text="Missing Phantom" 
+                              FontSize="12" 
+                              FontWeight="SemiBold" 
+                              Foreground="{StaticResource SecondaryTextBrush}" 
+                              HorizontalAlignment="Center"
+                              TextWrapping="Wrap"
+                              TextAlignment="Center"/>
+                    <TextBlock Text="{Binding MissingPhantomBomsCount}" 
+                              FontSize="28" 
+                              FontWeight="Bold" 
+                              Foreground="#E91E63" 
+                              HorizontalAlignment="Center" 
+                              Margin="0,5,0,0"/>
                 </StackPanel>
             </Grid>
         </Border>

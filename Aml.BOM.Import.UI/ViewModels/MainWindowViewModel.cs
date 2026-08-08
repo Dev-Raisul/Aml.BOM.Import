@@ -31,6 +31,7 @@ public partial class MainWindowViewModel : ObservableObject
             "NewBoms" => GetViewModel<NewBomsViewModel>("New BOMs", "View and validate imported BOMs pending integration"),
             "IntegratedBoms" => GetViewModel<IntegratedBomsViewModel>("Integrated BOMs", "View BOMs that have been integrated into Sage"),
             "DuplicateBoms" => GetViewModel<DuplicateBomsViewModel>("Duplicate BOMs", "View BOMs identified as duplicates"),
+            "PhantomBoms" => GetViewModel<PhantomBomsViewModel>("Phantom BOMs", "View Missing phantom type items that don't exist in Sage Billing Material"),
             "Logs" => GetViewModel<LogsViewModel>("Application Logs", "View and manage application log files"),
             "Settings" => GetViewModel<SettingsViewModel>("Settings", "Configure application settings and connections"),
             _ => null

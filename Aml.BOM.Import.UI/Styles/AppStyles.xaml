@@ -29,6 +29,10 @@
     <views:DuplicateBomsView/>
 </DataTemplate>
 
+<DataTemplate DataType="{x:Type viewModels:PhantomBomsViewModel}">
+    <views:PhantomBomsView/>
+</DataTemplate>
+
 <DataTemplate DataType="{x:Type viewModels:LogsViewModel}">
     <views:LogsView/>
 </DataTemplate>

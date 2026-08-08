@@ -1,0 +1,149 @@
+<UserControl x:Class="Aml.BOM.Import.UI.Views.PhantomBomsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button Content="Copy List to ClipBoard" 
+                   Command="{Binding CopyAllToClipboardCommand}"
+                   Style="{StaticResource PrimaryButtonStyle}"
+                   Margin="0,0,10,0"/>
+            <Button Content="Export to CSV" 
+                   Command="{Binding ExportCommand}"
+                   Style="{StaticResource SecondaryButtonStyle}"
+                   Margin="0,0,10,0"
+                   Visibility="{Binding TotalPhantomRecords, Converter={StaticResource StringToVisibilityConverter}}"/>
+        </StackPanel>
+
+        <!-- Notification Toast -->
+        <Border Grid.Row="1" 
+                Background="#4CAF50" 
+                BorderBrush="#388E3C" 
+                BorderThickness="0,0,0,2" 
+                Padding="15,10" 
+                Margin="0,0,0,10"
+                Visibility="{Binding ShowNotification, Converter={StaticResource BoolToVisibilityConverter}}">
+            <TextBlock Text="{Binding NotificationMessage}" 
+                      Foreground="White" 
+                      FontSize="14" 
+                      FontWeight="SemiBold" 
+                      VerticalAlignment="Center"/>
+        </Border>
+
+        <!-- Statistics Panel -->
+        <Border Grid.Row="2" 
+                Background="{StaticResource PrimaryBackgroundBrush}" 
+                BorderBrush="{StaticResource BorderBrush}" 
+                BorderThickness="1" 
+                CornerRadius="5" 
+                Padding="15" 
+                Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock Text="Total Missing Phantom Records" FontWeight="Bold" Foreground="#2C3E50"/>
+                <TextBlock Text="{Binding TotalPhantomRecords}" FontSize="20" FontWeight="Bold" Foreground="#E74C3C"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Search/Filter Panel -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#2C3E50"/>
+            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                    Padding="10,8"
+                    MinWidth="300"
+                    Background="White"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1"/>
+            <Button Content="Search" 
+                   Command="{Binding SearchCommand}"
+                   Style="{StaticResource PrimaryButtonStyle}"
+                   Margin="10,0,0,0"/>
+        </StackPanel>
+
+        <!-- Data Grid -->
+        <DataGrid Grid.Row="4"
+                 ItemsSource="{Binding PhantomBoms}"
+                 SelectedItem="{Binding SelectedPhantom}"
+                 AutoGenerateColumns="False"
+                 CanUserAddRows="False"
+                 CanUserDeleteRows="False"
+                 Background="White"
+                 BorderBrush="{StaticResource BorderBrush}"
+                 BorderThickness="1"
+                 GridLinesVisibility="Horizontal"
+                 HorizontalGridLinesBrush="#E0E0E0">
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Copy Component Item" 
+                             Command="{Binding CopyComponentItemCommand}"/>
+                    <MenuItem Header="Copy Parent Item" 
+                             Command="{Binding CopyParentItemCommand}"/>
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+            <DataGrid.Resources>
+                <Style TargetType="{x:Type DataGridRow}">
+                    <Style.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=Item, Converter={StaticResource StringToVisibilityConverter}}" Value="Visible"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Background" Value="White"/>
+                        </MultiDataTrigger>
+                        <Trigger Property="AlternationIndex" Value="0">
+                            <Setter Property="Background" Value="#F5F5F5"/>
+                        </Trigger>
+                        <Trigger Property="AlternationIndex" Value="1">
+                            <Setter Property="Background" Value="#FFFFFF"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.Resources>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Parent Item" Binding="{Binding ParentItemCode}" Width="120" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Component Item" Binding="{Binding ComponentItemCode}" Width="120" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="80" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Component Description" Binding="{Binding ComponentDescription}" Width="*" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Import Date" Binding="{Binding ImportDate, StringFormat=d}" Width="100" IsReadOnly="True"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="5" 
+                Background="#ECF0F1" 
+                Padding="10" 
+                BorderBrush="{StaticResource BorderBrush}" 
+                BorderThickness="0,1,0,0">
+            <TextBlock Text="{Binding StatusMessage}" 
+                      VerticalAlignment="Center" 
+                      Foreground="#7F8C8D"/>
+        </Border>
+
+        <!-- Loading Overlay -->
+        <Grid Grid.Row="0" Grid.RowSpan="6" 
+             Background="#000000" 
+             Opacity="0.3" 
+             Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="{Binding LoadingMessage}" 
+                          Foreground="White" 
+                          FontSize="16" 
+                          HorizontalAlignment="Center" 
+                          Margin="0,0,0,10"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -51,6 +51,9 @@ public partial class NewBomsViewModel : ObservableObject
     private int _failedBomsCount;
 
     [ObservableProperty]
+    private int _missingPhantomBomsCount;
+
+    [ObservableProperty]
     private int _newMakeItemsParentCount;
 
     [ObservableProperty]
@@ -98,6 +101,9 @@ public partial class NewBomsViewModel : ObservableObject
     private void NavigateToDuplicateBoms() => _mainWindowViewModel.NavigateCommand.Execute("DuplicateBoms");
 
     [RelayCommand]
+    private void NavigateToPhantomBoms() => _mainWindowViewModel.NavigateCommand.Execute("PhantomBoms");
+
+    [RelayCommand]
     private async Task LoadBoms()
     {
         IsLoading = true;
@@ -134,13 +140,14 @@ public partial class NewBomsViewModel : ObservableObject
 
             // Get ready to integrate count (records with Status='Ready')
             ValidatedBomsCount = statusSummary.ContainsKey("Ready") ? statusSummary["Ready"] : 0;
-            
+
             // Get total validated records (all records with Status='Validated' for the validation label)
             TotalValidatedRecords = statusSummary.ContainsKey("Validated") ? statusSummary["Validated"] : 0;
-            
+
             NewMakeItemsCount = statusSummary.ContainsKey("NewMakeItem") ? statusSummary["NewMakeItem"] : 0;
             NewBuyItemsCount = await _bomBillRepository.GetDistinctBuyItemCountAsync();
             DuplicateBomsCount = statusSummary.ContainsKey("Duplicate") ? statusSummary["Duplicate"] : 0;
+            MissingPhantomBomsCount = statusSummary.ContainsKey("MissingPhantom") ? statusSummary["MissingPhantom"] : 0;
             FailedBomsCount = statusSummary.ContainsKey("Failed") ? statusSummary["Failed"] : 0;
 
             // Calculate total pending (exclude Integrated, Duplicate, and Ready)

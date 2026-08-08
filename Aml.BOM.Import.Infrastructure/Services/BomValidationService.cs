@@ -139,16 +139,41 @@ public class BomValidationService : IBomValidationService
 
                     if (isPhantom)
                     {
-                        // Phantoms are automatically validated - they don't need to exist in CI_Item
-                        bill.Status = "Validated";
-                        bill.DateValidated = DateTime.Now;
-                        bill.ItemExists = true; // Treat as exists (conceptually)
-                        bill.ItemType = "Phantom";
-                        bill.ValidationMessage = "Phantom item - automatically validated";
-                        result.ValidatedRecords++;
-                        
-                        _logger.LogInformation("Phantom component {0} automatically validated", bill.ComponentItemCode);
-                        
+                    // Check if component exists in Sage BM_BillHeader
+                    // Phantoms are tracked in the main BomImportBill table with status "Validated" or "MissingPhantom"
+                    bool existsInBillHeader = false;
+                        try
+                        {
+                            existsInBillHeader = await _sageItemRepository.BillExistsInBomHeaderAsync(bill.ComponentItemCode);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning("Failed to check phantom component {0} in Sage BM_BillHeader: {1}", bill.ComponentItemCode, ex.Message);
+                        }
+
+                        if (existsInBillHeader)
+                        {
+                            // Component found in Sage BM_BillHeader - mark as Validated
+                            bill.Status = "Validated";
+                            bill.DateValidated = DateTime.Now;
+                            bill.ItemExists = true;
+                            bill.ItemType = "Phantom";
+                            bill.ValidationMessage = "Phantom component found in Sage BM_BillHeader";
+                            result.ValidatedRecords++;
+
+                            _logger.LogInformation("Phantom component {0} found in Sage BM_BillHeader - Status: Validated", bill.ComponentItemCode);
+                        }
+                        else
+                        {
+                            // Component NOT found in Sage BM_BillHeader - mark as Missing Phantom
+                            bill.Status = "MissingPhantom";
+                            bill.ItemExists = false;
+                            bill.ItemType = "Phantom";
+                            bill.ValidationMessage = "Phantom component NOT found in Sage BM_BillHeader";
+
+                            _logger.LogInformation("Phantom component {0} NOT found in Sage BM_BillHeader - Status: MissingPhantom", bill.ComponentItemCode);
+                        }
+
                         // Update the bill in database
                         await _billRepository.UpdateAsync(bill);
                         continue;
@@ -300,7 +325,7 @@ public class BomValidationService : IBomValidationService
 
         // Reset status of all non-duplicate, non-integrated bills back to "New" for re-validation
         // Do NOT touch records with Status='Integrated' - they are already in Sage!
-        var pendingStatuses = new[] { "Validated", "Ready", "Failed", "NewBuyItem", "NewMakeItem" };
+        var pendingStatuses = new[] { "Validated", "Ready", "Failed", "NewBuyItem", "NewMakeItem", "MissingPhantom" };
         
         foreach (var status in pendingStatuses)
         {

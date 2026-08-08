@@ -102,6 +102,11 @@ public partial class App : System.Windows.Application
                     new DuplicateBomsViewModel(
                         sp.GetRequiredService<BomImportService>(),
                         sp.GetRequiredService<IBomImportBillRepository>()));
+                services.AddTransient<PhantomBomsViewModel>(sp => 
+                    new PhantomBomsViewModel(
+                        sp.GetRequiredService<BomImportService>(),
+                        sp.GetRequiredService<IBomImportBillRepository>(),
+                        sp.GetRequiredService<ISageItemRepository>()));
                 services.AddTransient<LogsViewModel>();
                 services.AddTransient<SettingsViewModel>();
 
